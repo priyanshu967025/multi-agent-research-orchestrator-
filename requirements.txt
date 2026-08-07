@@ -1,0 +1,15 @@
+python-dotenv
+langchain
+langchain-core
+langchain-community
+langchain-groq
+tavily-python
+langchain-huggingface
+langchain-chroma
+langchain-text-splitters
+langgraph
+chromadb
+pypdf
+sentence-transformers
+streamlit
+fastmcp
