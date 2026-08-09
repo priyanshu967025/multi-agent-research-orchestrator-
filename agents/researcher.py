@@ -1,80 +1,181 @@
-from state.schema import ResearchState
-from config.setting import MODEL_NAME, get_groq_api_key, get_tavily_api_key, MAX_SEARCH_RESULTS
+"""
+🔍 Researcher Agent
+───────────────────
+Uses Tavily web search AND ChromaDB RAG to gather comprehensive data.
+Strategy: generates 3 strategic sub-queries from the main topic, then
+searches BOTH the web (Tavily) and uploaded documents (ChromaDB),
+aggregating all results with source URLs for downstream citation.
+"""
+
+import asyncio
+from langchain_groq import ChatGroq
+from langchain_tavily import TavilySearch
 from langchain_core.messages import SystemMessage, HumanMessage
 
-QUERY_GEN_PROMPT = """You are a research query strategist.
-Given a research topic, generate exactly 3 diverse, specific search queries that will cover different angles of the topic.
-Return ONLY the 3 queries, one per line. No numbering, no extra text."""
+from config.settings import MODEL_NAME, MAX_SEARCH_RESULTS
+from state.schema import ResearchState
 
-REVISION_PROMPT = """You are a research query strategist.
-The fact-checker flagged issues with previous research. Based on the feedback below, generate 3 NEW, improved search queries that address the gaps and inaccuracies.
-Return ONLY the 3 queries, one per line. No numbering, no extra text.
 
-FACT-CHECKER FEEDBACK:
-{feedback}"""
+# ── Tool setup ────────────────────────────────────────────────────────
+search_tool = TavilySearch(
+    max_results=MAX_SEARCH_RESULTS,
+    search_depth="advanced",
+)
 
-def get_llm():
-    groq_key = get_groq_api_key()
-    from langchain_groq import ChatGroq
-    return ChatGroq(model=MODEL_NAME, temperature=0.3, groq_api_key=groq_key)
+llm = ChatGroq(model=MODEL_NAME, temperature=0)
+
+
+async def _async_search_single(query: str) -> list[str]:
+    """Execute a single Tavily search asynchronously."""
+    try:
+        results = await search_tool.ainvoke({"query": query})
+        output = []
+        if isinstance(results, list):
+            for r in results:
+                if isinstance(r, dict):
+                    source = r.get("url", "Unknown source")
+                    content = r.get("content", "")
+                    output.append(f"[Source: {source}]\n{content}")
+                else:
+                    output.append(str(r))
+        elif isinstance(results, str):
+            output.append(results)
+        return output
+    except Exception as e:
+        # Fallback to sync invoke if ainvoke encounters an issue
+        try:
+            results = search_tool.invoke({"query": query})
+            output = []
+            if isinstance(results, list):
+                for r in results:
+                    if isinstance(r, dict):
+                        source = r.get("url", "Unknown source")
+                        content = r.get("content", "")
+                        output.append(f"[Source: {source}]\n{content}")
+                    else:
+                        output.append(str(r))
+            elif isinstance(results, str):
+                output.append(results)
+            return output
+        except Exception as sync_e:
+            return [f"[Search error for '{query}']: {str(sync_e)}"]
+
+
+async def _run_concurrent_searches(sub_queries: list[str]) -> list[str]:
+    """Run all sub-queries concurrently using asyncio.gather for maximum speed."""
+    tasks = [_async_search_single(q) for q in sub_queries]
+    results_nested = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    flat_results = []
+    for res in results_nested:
+        if isinstance(res, Exception):
+            flat_results.append(f"[Search execution error]: {str(res)}")
+        elif isinstance(res, list):
+            flat_results.extend(res)
+    return flat_results
+
 
 def researcher_node(state: ResearchState) -> dict:
+    """
+    Researcher agent node for the LangGraph pipeline.
+
+    1. Uses the LLM to generate focused sub-queries from the topic.
+    2. Runs sub-queries CONCURRENTLY using asyncio.gather for high speed.
+    3. Queries ChromaDB for relevant uploaded document context (RAG).
+    4. Aggregates all results with source attribution.
+    """
     topic = state["topic"]
     revision_count = state.get("revision_count", 0)
 
-    sub_queries = [topic]
-    groq_key = get_groq_api_key()
+    # If this is a revision loop, use fact-checker feedback to refine queries
+    if revision_count > 0 and state.get("fact_check_result"):
+        query_prompt = f"""You are a research strategist. A fact-checker has flagged issues 
+with previous research on: "{topic}"
 
+Fact-checker feedback:
+{state['fact_check_result']}
+
+Generate exactly 3 targeted search queries to fill the gaps and verify 
+the flagged claims. Return ONLY the 3 queries, one per line, no numbering or bullets."""
+    else:
+        query_prompt = f"""You are a research strategist. Generate exactly 3 focused, 
+diverse search queries to comprehensively research this topic: "{topic}"
+
+Cover different angles: factual data, expert opinions, and recent developments.
+Return ONLY the 3 queries, one per line, no numbering or bullets."""
+
+    # Generate sub-queries
+    query_response = llm.invoke([
+        SystemMessage(content="You are a research query generator. Output only the queries, nothing else."),
+        HumanMessage(content=query_prompt),
+    ])
+
+    sub_queries = [q.strip() for q in query_response.content.strip().split("\n") if q.strip()]
+    sub_queries = sub_queries[:3]  # Safety cap
+
+    # If LLM fails to generate queries, fall back to the topic itself
+    if not sub_queries:
+        sub_queries = [topic]
+
+    # ── Concurrent Web Search (Tavily + asyncio.gather) ────────────────
     try:
-        if groq_key:
-            llm = get_llm()
-            if revision_count > 0 and state.get("fact_check_result"):
-                prompt = REVISION_PROMPT.format(feedback=state["fact_check_result"])
+        # Check if an event loop is already running (e.g. inside Streamlit or FastAPI/Django)
+        try:
+            loop = asyncio.get_running_loop()
+            if loop.is_running():
+                import nest_asyncio
+                nest_asyncio.apply()
+                all_results = loop.run_until_complete(_run_concurrent_searches(sub_queries))
             else:
-                prompt = QUERY_GEN_PROMPT
-
-            query_response = llm.invoke([
-                SystemMessage(content=prompt),
-                HumanMessage(content=f"Topic: {topic}"),
-            ])
-            lines = [l.strip() for l in query_response.content.strip().split("\n") if l.strip()]
-            if lines:
-                sub_queries = lines[:3]
+                all_results = loop.run_until_complete(_run_concurrent_searches(sub_queries))
+        except RuntimeError:
+            all_results = asyncio.run(_run_concurrent_searches(sub_queries))
     except Exception as e:
-        sub_queries = [topic, f"{topic} latest research", f"{topic} analysis"]
+        # Fallback to sync sequential search if event loop management encounters edge cases
+        all_results = []
+        for q in sub_queries:
+            try:
+                res = search_tool.invoke({"query": q})
+                if isinstance(res, list):
+                    for r in res:
+                        if isinstance(r, dict):
+                            all_results.append(f"[Source: {r.get('url', 'Unknown')}]\n{r.get('content', '')}")
+                        else:
+                            all_results.append(str(r))
+            except Exception as se:
+                all_results.append(f"[Search error]: {str(se)}")
 
-    all_results = []
-    tavily_key = get_tavily_api_key()
-
-    try:
-        if tavily_key:
-            from tavily import TavilyClient
-            client = TavilyClient(api_key=tavily_key)
-            for query in sub_queries:
-                try:
-                    response = client.search(query=query, max_results=MAX_SEARCH_RESULTS)
-                    for r in response.get("results", []):
-                        all_results.append(f"[Source: {r.get('url', 'N/A')}]\n{r.get('content', '')}")
-                except Exception as ex:
-                    print(f"Tavily search error for query '{query}': {ex}")
-                    continue
-        else:
-            all_results.append("[Notice] Tavily API Key not found. Please set TAVILY_API_KEY in Streamlit secrets or .env file.")
-    except Exception as e:
-        all_results.append(f"[Search Error] {str(e)}")
-
+    # ── RAG Retrieval (ChromaDB) ──────────────────────────────────────
     rag_results = []
     try:
         from rag.vector_store import retrieve_context
+
+        # Search uploaded documents
         doc_context = retrieve_context(topic, collection_name="research_docs", k=5)
+        if doc_context:
+            rag_results.extend(doc_context)
+
+        # Search past research memory
         past_context = retrieve_context(topic, collection_name="past_research", k=3)
-        rag_results.extend(doc_context + past_context)
-    except Exception:
-        pass
+        if past_context:
+            rag_results.extend(past_context)
+
+    except Exception as e:
+        rag_results.append(f"[RAG retrieval note]: {str(e)}")
+
+    # ── Status Message ────────────────────────────────────────────────
+    rag_count = len([r for r in rag_results if not r.startswith("[RAG retrieval note]")])
+    status = (
+        f"⚡ Researcher (Async): Searched {len(sub_queries)} queries concurrently, "
+        f"retrieved {len(all_results)} web results"
+        + (f" + {rag_count} RAG document chunks" if rag_count > 0 else "")
+        + (" (revision round)" if revision_count > 0 else "")
+    )
 
     return {
         "research_data": all_results,
         "rag_context": rag_results,
-        "messages": [f"🔍 Researcher found {len(all_results)} web results and {len(rag_results)} document chunks."],
+        "messages": [status],
         "current_agent": "researcher",
     }
+

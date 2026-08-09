@@ -1,47 +1,84 @@
-from state.schema import ResearchState
-from config.setting import MODEL_NAME, get_groq_api_key
+"""
+📊 Analyst Agent
+────────────────
+Takes raw research data from the Researcher and extracts structured
+insights: key themes, patterns, contradictions, and consensus points.
+Produces a well-organized analysis for the Fact-Checker and Writer.
+"""
+
+from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
 
-SYSTEM_PROMPT = """You are an expert analyst. From the data:
-1. Identify 3-5 KEY THEMES
-2. Note CONTRADICTIONS (conflicts between sources)
-3. Highlight CONSENSUS points (where multiple sources agree)
-4. Flag GAPS (what is missing)
-Provide a structured output in Markdown."""
+from config.settings import MODEL_NAME
+from state.schema import ResearchState
 
-def get_llm():
-    groq_key = get_groq_api_key()
-    from langchain_groq import ChatGroq
-    return ChatGroq(model=MODEL_NAME, temperature=0.2, groq_api_key=groq_key)
+llm = ChatGroq(model=MODEL_NAME, temperature=0.1)
+
+ANALYST_SYSTEM_PROMPT = """You are an expert research analyst. Your job is to synthesize 
+raw research data into a clear, structured analysis.
+
+You MUST:
+1. Identify 3-5 KEY THEMES or findings from the data
+2. Note any CONTRADICTIONS between sources
+3. Highlight CONSENSUS points (claims supported by multiple sources)
+4. Flag any GAPS in the research that need more investigation
+5. Provide a brief SIGNIFICANCE assessment for each finding
+
+Format your output as a structured analysis with clear section headers using markdown.
+Be specific — cite source URLs when referencing claims.
+Do NOT make up information that isn't in the provided research data."""
+
 
 def analyst_node(state: ResearchState) -> dict:
+    """
+    Analyst agent node for the LangGraph pipeline.
+
+    Takes raw research_data AND rag_context and produces a structured
+    analysis with themes, contradictions, consensus, and gaps.
+    """
     topic = state["topic"]
     research_data = state.get("research_data", [])
     rag_context = state.get("rag_context", [])
 
-    compiled_data = "\n---\n".join(research_data[:10])
+    if not research_data and not rag_context:
+        return {
+            "analysis": "⚠️ No research data available to analyze.",
+            "messages": ["📊 Analyst: No data to analyze — skipping."],
+            "current_agent": "analyst",
+        }
 
+    # Compile research data into a single text block
+    compiled_data = "\n\n---\n\n".join(research_data)
+
+    # Add RAG context if available
     rag_section = ""
     if rag_context:
-        rag_section = f"\n\nDOCUMENT CONTEXT:\n" + "\n".join(rag_context[:5])
+        compiled_rag = "\n\n---\n\n".join(rag_context)
+        rag_section = f"""
 
-    groq_key = get_groq_api_key()
-    analysis = ""
-    try:
-        if groq_key:
-            llm = get_llm()
-            response = llm.invoke([
-                SystemMessage(content=SYSTEM_PROMPT),
-                HumanMessage(content=f"Topic: {topic}\nDATA:\n{compiled_data}{rag_section}"),
-            ])
-            analysis = response.content
-        else:
-            analysis = f"## Analysis for: {topic}\n\nData collected from {len(research_data)} sources.\n\n*(LLM analysis unavailable — GROQ_API_KEY is not configured in Streamlit Secrets or .env file)*"
-    except Exception as e:
-        analysis = f"## Analysis for: {topic}\n\nAnalysis generated with available data.\n\n*(Error: {e})*"
+DOCUMENT CONTEXT (from uploaded files & past research):
+{compiled_rag}"""
 
+    analysis_prompt = f"""Analyze the following research data on the topic: "{topic}"
+
+WEB RESEARCH DATA:
+{compiled_data}
+{rag_section}
+
+Provide a comprehensive structured analysis following your guidelines.
+When citing, distinguish between web sources and document sources."""
+
+    response = llm.invoke([
+        SystemMessage(content=ANALYST_SYSTEM_PROMPT),
+        HumanMessage(content=analysis_prompt),
+    ])
+
+    analysis = response.content
+
+    rag_note = f" + {len(rag_context)} document chunks" if rag_context else ""
     return {
         "analysis": analysis,
-        "messages": [f"📊 Analyst processed {len(research_data)} results."],
+        "messages": [f"📊 Analyst: Analyzed {len(research_data)} web results{rag_note}"],
         "current_agent": "analyst",
     }
+

@@ -1,0 +1,24 @@
+# Production Dockerfile for Django REST API Backend
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy dependencies list
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application files
+COPY . .
+
+WORKDIR /app/django_backend
+
+EXPOSE 8000
+
+# Run database migrations and start Gunicorn server
+CMD python manage.py migrate && gunicorn django_backend.wsgi:application --bind 0.0.0.0:8000 --workers 3

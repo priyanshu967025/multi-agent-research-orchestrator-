@@ -1,24 +1,47 @@
-# Secrets & Environment Variables
+# Environment
 .env
-*.env
+.env.local
+.env.production
 
-# Virtual Environment
-.venv/
-venv/
-ENV/
-env/
-
-# Python Cache & Bytecode
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+*.egg-info/
+dist/
+build/
+eggs/
+*.egg
+.Python
+env/
+venv/
+.venv/
 
-# Local Vector Database & Storage
-chroma_db/
-*.pdf
-
-# IDE & OS Settings
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Streamlit
+.streamlit/secrets.toml
+
+# ChromaDB & Database
+chroma_db/
+*.sqlite3
+*.db
+
+# Logs & Temporary Files
+*.log
+notes/*.aux
+notes/*.log
+notes/*.out
+notes/*.pdf
+notes/*.toc
+

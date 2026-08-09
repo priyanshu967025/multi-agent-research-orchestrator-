@@ -1,183 +1,245 @@
+<div align="center">
+
 # 🔬 Multi-Agent Research Orchestrator
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![LangGraph](https://img.shields.io/badge/orchestration-LangGraph-orange.svg)](https://github.com/langchain-ai/langgraph)
-[![Groq Llama-3.3-70B](https://img.shields.io/badge/LLM-Groq%20Llama--3.3--70B-purple.svg)](https://groq.com/)
-[![ChromaDB RAG](https://img.shields.io/badge/RAG-ChromaDB-green.svg)](https://www.trychroma.com/)
-[![Streamlit App](https://img.shields.io/badge/UI-Streamlit-red.svg)](https://streamlit.io/)
-[![MCP Server](https://img.shields.io/badge/protocol-FastMCP-teal.svg)](https://github.com/jlowin/fastmcp)
+### *Auth-First Production Platform for Autonomous AI Research & LLM Quality Benchmarking*
 
-An autonomous, self-correcting multi-agent research pipeline that collaborates to research complex topics, analyze contradictions, verify claims, and produce publication-ready Markdown reports with citations.
-
----
-
-## 🌟 Key Features
-
-- **🤖 4 Specialized AI Agents:**
-  - **🔍 Researcher**: Generates multi-angle queries, searches the web via Tavily, and pulls context from uploaded PDFs via ChromaDB RAG.
-  - **📊 Analyst**: Synthesizes raw findings into key themes, flags source contradictions, highlights consensus points, and identifies knowledge gaps.
-  - **✓ Fact Checker**: Validates claims against source evidence. Triggers automatic revision loops if claims lack proof.
-  - **✏️ Writer**: Compiles structured Markdown reports with citations and automatically saves session context into long-term vector memory.
-
-- **🔄 Self-Correcting Revision Loop:**
-  - If the Fact Checker flags unverified claims or gaps, the pipeline routes back to the Researcher with targeted feedback (up to 2 revision cycles).
-
-- **📄 RAG & PDF Ingestion:**
-  - Upload PDF research papers or documents to enrich agent knowledge using `sentence-transformers/all-MiniLM-L6-v2` embeddings in ChromaDB.
-
-- **🧠 Persistent Research Memory:**
-  - Past research reports are saved back into ChromaDB vector memory and automatically referenced in future research sessions.
-
-- **🎨 Clean Human-Engineered UI:**
-  - Custom Streamlit frontend featuring real-time agent execution streaming, activity logs, download buttons (`.md` / `.txt`), and **3 Appearance Themes** (`☀️ Light`, `🌙 Dark`, `🌲 Emerald Slate`).
-
-- **🔌 FastMCP Server Interface:**
-  - Exposes the entire orchestrator pipeline as MCP tools for **Claude Desktop**, **Cursor**, or any MCP-compliant AI assistant.
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Django REST Framework](https://img.shields.io/badge/Django_REST-Port_8080-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.django-rest-framework.org/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-Agent_Framework-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
+[![Groq](https://img.shields.io/badge/Groq-LLM_Inference-F55036?style=for-the-badge&logo=groq&logoColor=white)](https://groq.com)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Light_Canvas_UI-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io)
+[![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 
 ---
 
-## 📐 System Architecture
+![Hero Banner](assets/hero_banner.png)
 
-```mermaid
-graph TD
-    User([User Topic / PDF Uploads]) --> Researcher
+**Multi-Agent Research Orchestrator** is a full-stack, enterprise-grade AI research workspace powered by **LangGraph**, **Django REST Framework (Port 8080)**, and **Streamlit**. It coordinates a team of 4 specialized AI agents working alongside a persistent ChromaDB RAG engine to deliver fact-checked, fully cited research reports with live side-by-side quality benchmarks.
 
-    subgraph "LangGraph State Machine"
-        Researcher["🔍 Researcher Agent<br/>(Tavily Search + ChromaDB RAG)"] --> Analyst["📊 Analyst Agent<br/>(Theme & Gap Extraction)"]
-        Analyst --> FactChecker{"✓ Fact Checker<br/>(Claim Verification)"}
-        
-        FactChecker -- "NEEDS_REVISION (Max 2)" --> Researcher
-        FactChecker -- "PASSED" --> Writer["✏️ Writer Agent<br/>(Markdown Report + Memory Save)"]
-    end
+[Quick Start](#-quick-start) · [Architecture](#-architecture) · [Django REST API](#-django-rest-api) · [Benchmark Suite](#-llm-quality-benchmark-suite) · [Docker Deployment](#-docker--production-deployment)
 
-    Writer --> Output([Final Report & Streamlit UI])
-    Writer --> Memory[(ChromaDB Past Research Memory)]
+</div>
+
+---
+
+## ✨ Key Platform Features
+
+| Feature | Description |
+|---|---|
+| 🔐 **Auth-First Gateway** | Mandatory user login/signup gateway integrated with DRF Token Authentication. |
+| 🔬 **Multi-Agent Pipeline** | 4 autonomous agents (Researcher, Analyst, Fact-Checker, Writer) in a state machine flow. |
+| 📊 **LLM Quality Benchmark** | Side-by-side comparative evaluation of Single-Agent LLM vs Multi-Agent Orchestrator. |
+| 📜 **User Research History** | Live user-isolated database history table tracking past reports and evaluation metrics. |
+| 📚 **PDF RAG Vector Engine** | Upload PDF documents to ingest knowledge into persistent ChromaDB collections. |
+| ⚡ **Fast Search Strategy** | Generates strategic sub-queries and executes non-blocking parallel Tavily searches. |
+| 🔄 **Automated Verification Loop** | Fact-checker cross-verifies claims against sources with feedback cycles (max 2 loops). |
+| 🎨 **Pristine White Light Theme** | High-contrast visual design, custom AI banners, and live agent status tracking. |
+| 🐳 **Docker Containerized** | Full multi-container Docker Compose setup for backend API and Streamlit UI. |
+| 🔌 **FastMCP Integration** | Exposed as a standard MCP Server for Claude Desktop, Cursor, and IDE extensions. |
+
+---
+
+## 🏗️ Architecture & Agent Pipeline
+
+![Pipeline Visual](assets/pipeline_visual.png)
+
+### Workflow Pipeline
 ```
+                              ┌────────────────────────┐
+                              │    User Input Query    │
+                              └───────────┬────────────┘
+                                          │
+                                          ▼
+                              ┌────────────────────────┐
+                              │      🔍 Researcher      │◄────────────────────────┐
+                              └───────────┬────────────┘                         │
+                                          │ (Web Search + ChromaDB RAG)           │
+                                          ▼                                      │
+                              ┌────────────────────────┐                         │
+                              │       📊 Analyst        │                         │
+                              └───────────┬────────────┘                         │
+                                          │ (Pattern & Consensus Extraction)     │
+                                          ▼                                      │
+                              ┌────────────────────────┐                         │ (Re-Research Loop
+                              │     ✅ Fact Checker    ├─────────────────────────┘  Max 2 Loops)
+                              └───────────┬────────────┘
+                                          │ (Claims Verified)
+                                          ▼
+                              ┌────────────────────────┐
+                              │        ✍️ Writer       │
+                              └───────────┬────────────┘
+                                          │
+                                          ▼
+                              ┌────────────────────────┐
+                              │ Final Cited Markdown   │
+                              └────────────────────────┘
+```
+
+- **Researcher Agent**: Formulates queries, performs parallel Tavily searches, and retrieves context from ChromaDB RAG.
+- **Analyst Agent**: Identifies consensus, key themes, and contradictions across research data.
+- **Fact-Checker Agent**: Evaluates claim credibility and routes back for additional research if gaps exist.
+- **Writer Agent**: Synthesizes structured markdown reports complete with inline citations and references.
+
+---
+
+## 🔌 Django REST API (`/api/v1/`)
+
+The platform includes a dedicated **Django REST API** running on **Port 8080** for database state management and token authentication.
+
+![Benchmark Visual](assets/benchmark_visual.png)
+
+### API Endpoints Overview
+
+```
+POST /api/v1/auth/register/     👉 Register new user account & receive Token
+POST /api/v1/auth/login/        👉 Authenticate user credentials & return Token
+GET  /api/v1/auth/me/           👉 Fetch authenticated user profile & task metrics
+POST /api/v1/research/start/    👉 Trigger multi-agent research pipeline task
+GET  /api/v1/research/history/  👉 List user-isolated past research tasks
+POST /api/v1/eval/run/          👉 Execute single-agent vs multi-agent quality benchmark
+GET  /api/v1/eval/history/       👉 Fetch historical benchmark evaluation logs
+```
+
+---
+
+## 📊 LLM Quality Benchmark Suite
+
+The platform includes an automated evaluation engine (`evaluation/evaluator.py`) that benchmarks research performance across key metrics:
+
+1. **Conciseness & Precision Score** (0–100%)
+2. **Fact Verification Rate** (% of claims backed by verified sources)
+3. **Citation Density** (Citations per 1,000 words)
+4. **Execution Duration** (Seconds elapsed)
+
+---
+
+## 🛠️ Tech Stack
+
+- **Backend API**: Python 3.11, Django 5.1, Django REST Framework, SQLite / PostgreSQL
+- **Orchestration**: LangGraph, LangChain, Groq API (`llama-3.3-70b-versatile`), Tavily Web Search API
+- **RAG & Vectors**: ChromaDB, HuggingFace Embeddings (`all-MiniLM-L6-v2`), PyPDF / LangChain Document Loaders
+- **Frontend UI**: Streamlit (Pristine Light Theme, Custom CSS Glassmorphism)
+- **Deployment**: Docker, Docker Compose, FastMCP Server Protocol
+
+---
+
+## 🚀 Quick Start
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/priyanshu967025/multi-agent-research-orchestrator-.git
+cd multi-agent-research-orchestrator-
+```
+
+### 2. Set Up Virtual Environment
+
+```bash
+python -m venv venv
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+```
+
+### 3. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configure Environment Keys (`.env`)
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and set your API keys:
+```env
+GROQ_API_KEY=gsk_your_groq_api_key
+TAVILY_API_KEY=tvly-your_tavily_api_key
+DJANGO_SECRET_KEY=your_django_secret_key
+DJANGO_API_URL=http://127.0.0.1:8080/api/v1
+```
+
+### 5. Launch the Platform
+
+#### Step A: Run Django REST API Server (Terminal 1)
+```bash
+python django_backend/manage.py migrate
+python django_backend/manage.py runserver 8080
+```
+
+#### Step B: Run Streamlit UI (Terminal 2)
+```bash
+streamlit run app.py
+```
+
+Open **`http://localhost:8501`** to access the workspace!
+
+---
+
+## 🐳 Docker & Production Deployment
+
+The project is pre-configured for Docker hosting:
+
+```bash
+# Build and run containers in background
+docker-compose up --build -d
+```
+
+For cloud hosting instructions (Render / Railway / Streamlit Cloud), refer to [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ---
 
 ## 📁 Repository Structure
 
 ```
-Multi-Agent-Research-Orchestrator/
-├── agents/
-│   ├── researcher.py       # Query generation, Tavily search & RAG retrieval
-│   ├── analyst.py          # Thematic analysis, gaps & contradictions
-│   ├── fact_checker.py     # Claim verification & revision loop control
-│   └── writer.py           # Markdown report synthesis & memory persistence
-├── config/
-│   └── setting.py          # Centralized configuration & environment loader
-├── graph/
-│   └── workflow.py         # LangGraph state graph assembly & conditional routing
-├── rag/
-│   └── vector_store.py     # ChromaDB persistence, PDF loading & similarity search
-├── state/
-│   └── schema.py           # Shared ResearchState TypedDict definition
-├── app.py                  # Streamlit web application interface
-├── mcp_server.py           # FastMCP server exposing tools for Claude Desktop / Cursor
-├── requirements.txt        # Python package dependencies
-├── .env.example            # Environment variable template
-└── README.md               # Documentation
+Multi-Agent Research Orchestrator/
+│
+├── agents/                  # 🤖 Agent definitions (Researcher, Analyst, Fact Checker, Writer)
+├── assets/                  # 🎨 Custom AI visual banners and diagrams
+├── config/                  # ⚙️ Application configuration & env loader
+├── django_backend/          # 🐍 Django REST API (Port 8080) for Auth & State Persistence
+│   ├── api/                 # DRF Models, Views, Serializers, URLs
+│   └── test_port_8080.py    # Dedicated API endpoint verification script
+├── evaluation/              # 📊 LLM quality benchmarking engine
+├── graph/                   # 🔗 LangGraph StateGraph state-machine wiring
+├── notes/                   # 📑 LaTeX & documentation notes
+├── rag/                     # 📚 ChromaDB vector engine & document loader
+├── state/                   # 📐 Shared TypedDict state schemas
+├── app.py                   # 🎨 Streamlit UI Workspace (Light Canvas Theme)
+├── mcp_server.py            # 🔌 FastMCP server protocol
+├── Dockerfile.backend       # 🐳 Django API Docker image definition
+├── Dockerfile.frontend      # 🐳 Streamlit UI Docker image definition
+├── docker-compose.yml       # 🐳 Multi-container production orchestrator
+├── DEPLOYMENT.md            # 📖 Complete production deployment guide
+└── README.md                # 📖 Platform Documentation
 ```
 
 ---
 
-## 🚀 Quickstart Guide
-
-### 1. Prerequisites & Installation
-
-Clone the repository and install dependencies:
-
-```bash
-git clone https://github.com/YOUR_USERNAME/multi-agent-research-orchestrator.git
-cd multi-agent-research-orchestrator
-
-# Create & activate virtual environment
-python -m venv .venv
-# On Windows PowerShell:
-.\.venv\Scripts\Activate.ps1
-# On Linux/macOS:
-source .venv/bin/activate
-
-# Install required packages
-pip install -r requirements.txt
-```
+<div align="center">
+  <sub>Built with ❤️ using LangGraph + Django REST + Groq + Tavily + ChromaDB + Streamlit</sub>
+</div>
+ase chunk counts |
+| `clear_knowledge_base()` | Wipe all stored data |
 
 ---
 
-### 2. Configure Environment Variables
+## 🤝 Contributing
 
-Create a `.env` file in the root directory:
-
-```env
-GROQ_API_KEY=your_groq_api_key_here
-TAVILY_API_KEY=your_tavily_api_key_here
-
-MODEL_NAME=llama-3.3-70b-versatile
-MAX_SEARCH_RESULTS=5
-MAX_REVISIONS=2
-
-CHROMA_PERSIST_DIR=./chroma_db
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-CHUNK_SIZE=1000
-CHUNK_OVERLAP=200
-```
-
-> 🔑 Get your API keys:
-> - **Groq API Key**: [console.groq.com](https://console.groq.com/)
-> - **Tavily API Key**: [tavily.com](https://tavily.com/)
-
----
-
-### 3. Run the Web Application
-
-Launch the Streamlit interface:
-
-```bash
-streamlit run app.py
-```
-
-Open your browser at `http://localhost:8501`.
-
----
-
-### 4. Run as an MCP Server (Claude Desktop / Cursor)
-
-Expose the orchestrator to AI assistants via Model Context Protocol:
-
-```bash
-python mcp_server.py
-```
-
-To connect to **Claude Desktop**, add this to your `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "research-orchestrator": {
-      "command": "python",
-      "args": ["/path/to/multi-agent-research-orchestrator/mcp_server.py"],
-      "env": {
-        "GROQ_API_KEY": "your_groq_api_key",
-        "TAVILY_API_KEY": "your_tavily_api_key"
-      }
-    }
-  }
-}
-```
-
----
-
-## 🌐 Free Deployment (Streamlit Community Cloud)
-
-1. Push this repository to **GitHub**.
-2. Visit [share.streamlit.io](https://share.streamlit.io/) and click **New App**.
-3. Select your repository, set main file to `app.py`.
-4. Go to **Advanced settings $\rightarrow$ Secrets** and add your `GROQ_API_KEY` and `TAVILY_API_KEY`.
-5. Click **Deploy!**
+Contributions welcome! Feel free to open issues or submit PRs.
 
 ---
 
 ## 📜 License
 
-MIT License — feel free to modify, extend, and use in your own AI projects!
+MIT License — feel free to use this in your portfolio!
+
+---
+
+<div align="center">
+  <sub>Built with ❤️ using LangGraph + Groq + Tavily + ChromaDB + FastMCP + Streamlit</sub>
+</div>
