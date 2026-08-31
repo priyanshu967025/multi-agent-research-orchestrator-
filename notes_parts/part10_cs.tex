@@ -1,0 +1,226 @@
+\newpage
+
+% ######################################################################
+% PART X: CORE CS REVISION
+% ######################################################################
+\part{Core CS Revision --- Coding Round Ke Liye}
+
+\begin{storybox}
+NIT CSE interview mein project ke saath \textbf{coding round} bhi hota hai --- DSA + core CS (OS, DBMS, CN). Ye section 30-min quick revision hai --- important concepts Hinglish mein, interview-ready form mein. Is project ke concepts se connect karke padho --- double fayda.
+\end{storybox}
+
+% ######################################################################
+% SECTION 44: DSA PATTERNS
+% ######################################################################
+\section{DSA Patterns --- 15 Patterns, 90\% Problems}
+
+\begin{conceptbox}
+\textbf{LeetCode style coding round mein 15 patterns kaafi hain:}
+\begin{enumerate}[label=\arabic*.]
+\item \textbf{Sliding Window} --- subarray/substring problems (fixed + variable window)
+\item \textbf{Two Pointers} --- sorted arrays, palindrome, 3-sum
+\item \textbf{Fast \& Slow Pointers} --- cycle detection, middle of linked list
+\item \textbf{Merge Intervals} --- sort + merge overlapping
+\item \textbf{Cyclic Sort} --- 1..n numbers missing/duplicate
+\item \textbf{In-place Linked List Reversal}
+\item \textbf{Tree BFS/DFS} --- level order, max depth, paths
+\item \textbf{Tree Traversals} --- inorder/preorder/postorder + iterative versions
+\item \textbf{Heap} --- top-k, k-way merge, median stream
+\item \textbf{Binary Search} --- search space reduction (rotated array, peak)
+\item \textbf{Backtracking} --- permutations, combinations, subsets, board problems
+\item \textbf{Dynamic Programming} --- 0/1 knapsack, LCS, LIS, coin change
+\item \textbf{Graph BFS/DFS} --- connected components, shortest path (unweighted)
+\item \textbf{Topological Sort} --- dependency ordering, course schedule
+\item \textbf{Trie} --- prefix problems, autocomplete, word search
+\end{enumerate}
+\end{conceptbox}
+
+\subsection{Sliding Window --- Code Template}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={Variable window template}]
+def sliding_window(nums, k):
+    left = 0
+    window_sum = 0
+    best = 0
+    for right in range(len(nums)):
+        window_sum += nums[right]          # expand
+        while window_sum > k:              # shrink condition
+            window_sum -= nums[left]
+            left += 1
+        best = max(best, right - left + 1)
+    return best
+\end{lstlisting}
+
+\textbf{Key insight:} Har right index par window \textbf{expand} karo, condition tootne par \textbf{shrink} --- har element max 2 baar touch hota hai, O(n).
+\end{codestorybox}
+
+\subsection{Binary Search --- Template}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={Binary search template}]
+def binary_search(arr, target):
+    lo, hi = 0, len(arr) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1   # not found
+\end{lstlisting}
+
+\textbf{Variations:} lower bound (first position $\geq$ target), upper bound, rotated array (check \texttt{arr[lo] <= arr[mid]} for sorted half), peak element.
+\end{codestorybox}
+
+\subsection{DP --- 0/1 Knapsack Pattern}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={Knapsack DP}]
+def knapsack(weights, values, capacity):
+    n = len(weights)
+    dp = [0] * (capacity + 1)
+    for i in range(n):
+        for w in range(capacity, weights[i] - 1, -1):
+            dp[w] = max(dp[w], dp[w - weights[i]] + values[i])
+    return dp[capacity]
+\end{lstlisting}
+
+\textbf{Pattern recognition:} ``Pick or skip'' problems (subset sum, partition equal, coin change) --- 1D DP with reverse loop. LCS/LIS: 2D DP grid.
+\end{codestorybox}
+
+\begin{interviewbox}
+\textbf{Q: ``DSA project se kaise relate karta hai?''}
+
+\textbf{Answer:} (Connect karo!) (1) \textbf{Graph traversal} = LangGraph ke nodes/edges; (2) \textbf{Hashmap} = session state / ChromaDB metadata lookups; (3) \textbf{Sliding window} = context window management (top-k sources); (4) \textbf{Binary search} = sorted history queries; (5) \textbf{Trie} = autocomplete in search. Ye connections interviewer ko impress karte hain --- ``CS fundamentals apply karta hoon, sirf padhta nahi.''
+\end{interviewbox}
+
+% ######################################################################
+% SECTION 45: OS + DBMS QUICK REVISION
+% ######################################################################
+\section{OS + DBMS Quick Revision}
+
+\subsection{Operating Systems --- Top 10}
+
+\begin{longtable}{p{4.5cm} p{9.5cm}}
+\toprule
+\textbf{Concept} & \textbf{1-line interview answer} \\
+\midrule
+Process vs Thread & Process: alag memory space; Thread: process ke andar, shared memory \\
+Context switch & CPU ek process se dusre par switch --- state save/restore \\
+Deadlock & Circular wait of resources --- 4 conditions: mutual exclusion, hold\&wait, no preemption, circular wait \\
+Deadlock prevention & Ek condition tod do (allocation strategy) \\
+Scheduling & FCFS, SJF, Round Robin (time-slice), Priority --- trade-offs: fairness vs throughput \\
+Page fault & Requested page RAM mein nahi --- disk se load \\
+LRU cache & Least Recently Used eviction --- Python dict preserves insertion, OrderedDict for LRU \\
+Semaphore/Mutex & Mutex: binary lock; Semaphore: counting lock (producer-consumer) \\
+Virtual memory & Disk ko RAM extension --- paging, TLB \\
+Race condition & Concurrent access without sync --- locks needed \\
+\bottomrule
+\end{longtable}
+
+\begin{interviewbox}
+\textbf{Project connection:} ``Streamlit app \textbf{thread-safety}: session state per-session isolated hai --- concurrent users ka data mix nahi hota. Django production mein Gunicorn workers = multiple processes (isolated memory). Thread-safety aur isolation real systems mein practical problem hai.''
+\end{interviewbox}
+
+\subsection{DBMS --- Top 12}
+
+\begin{longtable}{p{4.5cm} p{9.5cm}}
+\toprule
+\textbf{Concept} & \textbf{1-line interview answer} \\
+\midrule
+Primary key & Unique row identifier (NOT NULL + UNIQUE) \\
+Foreign key & Dusri table ka reference --- referential integrity \\
+Index & Search speed up (B-tree / hash) --- write slow down \\
+Normalization & Redundancy kam --- 1NF/2NF/3NF (no transitive dependency) \\
+ACID & Atomicity, Consistency, Isolation, Durability \\
+Transaction & Multiple ops as one unit --- commit/rollback \\
+JOIN & Inner: common rows; Left: all left + matches; Cross: cartesian \\
+GROUP BY & Rows group karke aggregate (COUNT, SUM, AVG) \\
+SQL injection & Untrusted input SQL mein --- parameterized queries se bacho \\
+CAP theorem & Consistency vs Availability vs Partition tolerance --- 2 choose karo \\
+Sharding & Data horizontally split across servers \\
+Replication & Data copy across servers --- read scaling + failover \\
+\bottomrule
+\end{longtable}
+
+\begin{interviewbox}
+\textbf{Project connection:} ``Django ORM migrations = schema version control. Is project mein ResearchSession + BenchmarkEvaluation FK/relations. \texttt{order\_by("-created\_at", "-id")} --- index-friendly deterministic ordering. SQLite single-writer limitation production mein PostgreSQL shift ka reason hai. Ye DBMS concepts is project par directly apply hote hain.''
+\end{interviewbox}
+
+\subsection{SQL Practice --- 5 Must-Know Queries}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={SQL essentials}]
+-- 1. Join + aggregate: har user ke sessions count
+SELECT u.username, COUNT(s.id) AS session_count
+FROM auth_user u
+LEFT JOIN api_researchsession s ON s.user_id = u.id
+GROUP BY u.id, u.username
+ORDER BY session_count DESC;
+
+-- 2. Latest benchmark per topic (window function)
+SELECT topic, single_agent_depth, created_at
+FROM (
+  SELECT *, ROW_NUMBER() OVER (
+    PARTITION BY topic ORDER BY created_at DESC) rn
+  FROM api_benchmarkevaluation
+) t WHERE rn = 1;
+
+-- 3. Index
+CREATE INDEX idx_session_created ON api_researchsession (created_at DESC);
+
+-- 4. Update
+UPDATE api_benchmarkevaluation SET verdict = 'TIE'
+WHERE created_at < '2026-01-01';
+
+-- 5. Delete duplicates
+DELETE FROM api_benchmarkevaluation
+WHERE id NOT IN (
+  SELECT MIN(id) FROM api_benchmarkevaluation GROUP BY topic);
+\end{lstlisting}
+\end{codestorybox}
+
+% ######################################################################
+% SECTION 46: COMPUTER NETWORKS QUICK REVISION
+% ######################################################################
+\section{Computer Networks Quick Revision}
+
+\begin{longtable}{p{4.5cm} p{9.5cm}}
+\toprule
+\textbf{Concept} & \textbf{1-line interview answer} \\
+\midrule
+OSI model & 7 layers: Physical, Data Link, Network, Transport, Session, Presentation, Application \\
+TCP vs UDP & TCP: reliable, ordered, connection (handshake); UDP: fast, no guarantee \\
+TCP handshake & 3-way: SYN $\rightarrow$ SYN-ACK $\rightarrow$ ACK \\
+HTTP methods & GET (read), POST (create), PUT (update), DELETE, PATCH \\
+HTTP status & 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 404, 500 \\
+HTTPS & HTTP + TLS encryption --- certificate based trust \\
+DNS & Domain $\rightarrow$ IP resolution (hierarchy: root $\rightarrow$ TLD $\rightarrow$ authoritative) \\
+Load balancer & Traffic distribute across servers (round-robin, least-connections) \\
+CDN & Content cached geographically near users \\
+WebSocket & Full-duplex persistent connection (real-time) \\
+CORS & Browser security: cross-origin policy --- server headers control \\
+Rate limiting & Request frequency cap --- token bucket, fixed window \\
+\bottomrule
+\end{longtable}
+
+\begin{interviewbox}
+\textbf{Project connection:} ``(1) Django API: HTTP methods/status codes exact REST semantics follow karte hain; (2) CORS: django-cors-headers --- Streamlit (8501) se Django (8001) cross-origin calls; (3) MCP stdio transport: local process pipes; SSE/HTTP remote; (4) Real-time: Streamlit WebSocket-based; (5) Security: HTTPS + rate limiting production checklist.''
+\end{interviewbox}
+
+\subsection{System Design Quick Patterns}
+
+\begin{conceptbox}
+\textbf{4 design patterns interview mein:}
+\begin{enumerate}[label=\arabic*.]
+\item \textbf{API Gateway} --- single entry, auth, rate limiting, routing.
+\item \textbf{Message Queue} --- decoupling + async (SQS/RabbitMQ/Kafka) --- pipeline jobs ke liye.
+\item \textbf{Cache} --- Redis: hot data, session, rate limit counters.
+\item \textbf{Database per service} --- microservices isolation (ya monolith first).
+\end{enumerate}
+
+\textbf{Is project ke design principles:} single core (research\_graph) + multiple adapters (Streamlit/MCP/Django) --- adapter pattern ka real example. Ye bolo to interviewer ko pata chalega ki tum patterns ko naam se jaante ho.
+\end{conceptbox}

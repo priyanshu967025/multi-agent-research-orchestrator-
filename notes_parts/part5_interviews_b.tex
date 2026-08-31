@@ -1,0 +1,208 @@
+\newpage
+
+\section{Q\&A Bank Part 2 --- Project Specific \& System Design}
+
+\subsection{Streamlit}
+
+\begin{interviewbox}
+\textbf{Q25: ``Streamlit kya hai? Rerun model samjhao.''}
+
+\textbf{Answer:} Streamlit Python data/AI apps banane ka framework --- script har interaction par \textbf{top se neeche rerun} hota hai. Isliye state reset na ho iske liye \texttt{st.session\_state} chahiye --- session-scoped dictionary jo reruns ke beech persist karti hai. Is project mein theme, agent statuses, messages, final report sab session state mein hain.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q26: ``st.session\_state bina kya problem hoti?''}
+
+\textbf{Answer:} Har button click par script rerun hoti hai --- normal Python variables reset. Agar report session state mein na ho, to har interaction par report gayab. Isliye pattern: lazy init \texttt{if key not in st.session\_state: st.session\_state[key] = default}. Ye Streamlit interviews ka favourite question hai.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q27: ``Streamlit vs Gradio vs React?''}
+
+\textbf{Answer:} Streamlit: rapid prototyping, Python-only, built-in widgets --- data/AI apps ke liye. Gradio: ML demos ke liye focused (image/model demos). React: production web apps --- full control par frontend development chahiye. Is project mein Streamlit isliye: real-time agent progress streaming + zero frontend code + Python ek hi language.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q28: ``Streamlit app production mein?''}
+
+\textbf{Answer:} Streamlit Cloud free hosting deta hai --- secrets manager ke saath. Limitations: session-based (state server memory mein), single-process. Production scale par: multi-instance + sticky sessions, ya frontend alag. Is project ka architecture isliye interfaces alag rakhta hai --- Streamlit sirf ek interface hai, backend logic independent.
+\end{interviewbox}
+
+\subsection{Django REST Framework}
+
+\begin{interviewbox}
+\textbf{Q29: ``Django vs Flask vs FastAPI?''}
+
+\textbf{Answer:} Django: batteries-included --- ORM, admin, auth, migrations built-in --- bade structured apps. Flask: minimal, flexible. FastAPI: async, type-hint based, automatic OpenAPI docs --- modern APIs. Is project mein Django isliye: (1) ORM + migrations --- models quickly; (2) built-in auth (register/login tokens); (3) DRF serializers clean API layer. FastAPI bhi kaam karta, par Django ka admin/ecosystem is scale ke liye solid.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q30: ``DRF mein serializer kya karta hai?''}
+
+\textbf{Answer:} Serializer = data conversion layer: (1) Python objects $\rightarrow$ JSON (serialization); (2) JSON $\rightarrow$ validated Python objects (deserialization); (3) \textbf{Validation} --- required fields, types, custom validators. Is project mein \texttt{ResearchSessionSerializer}, \texttt{BenchmarkEvaluationSerializer} models ko API responses mein convert karte hain.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q31: ``View vs ViewSet? Is project mein kya use hua aur kyun?''}
+
+\textbf{Answer:} \texttt{APIView}: manual control --- har HTTP method (get/post) khud handle karta hai. ViewSet: CRUD boilerplate auto-generated (list/create/retrieve). Is project mein \texttt{APIView} use kiya: endpoints custom logic ke hain (register, login, execute research, benchmark) --- standard CRUD nahi, isliye explicit control better tha. Interviewer ko ye trade-off batana acha hai.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q32: ``Auth kaise implement kiya? JWT kyun nahi?''}
+
+\textbf{Answer:} Is project mein simple token auth: register/login par random token generate karke user se link --- requests mein \texttt{Authorization: Token <token>} header. JWT: stateless (signature-verified), multi-service scaling ke liye. Simple token: stateful (DB lookup), logout turant, implementation simple. Is project ke scale par simple token sufficient tha --- production multi-service par JWT better.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q33: ``Migrations kya hote hain?''}
+
+\textbf{Answer:} Migrations = DB schema changes ka version control. \texttt{models.py} mein changes $\rightarrow$ \texttt{makemigrations} (change file banata) $\rightarrow$ \texttt{migrate} (DB apply). Is project mein \texttt{0001\_initial} migration hai --- ResearchSession + BenchmarkEvaluation tables. Isse schema changes trackable aur reversible hain.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q34: ``SQLite vs PostgreSQL?''}
+
+\textbf{Answer:} SQLite: file-based, zero-config, single-user --- dev/demo ke liye perfect. PostgreSQL: server-based, concurrent users, features (JSONB, full-text) --- production. Is project mein SQLite (dev) + Django ORM ka matlab hai ki production par connection string badalna enough hai --- \textbf{ORM abstraction} ka fayda.
+\end{interviewbox}
+
+\subsection{Testing}
+
+\begin{interviewbox}
+\textbf{Q35: ``Testing kyun zaroori? Kya test kiya is project mein?''}
+
+\textbf{Answer:} Regression protection + documentation + confidence. Is project mein 16 pytest tests: auth (register/login/failures), research execution (validation, persistence, 500 paths), benchmark endpoint + history. \textbf{Mocking} se real API calls test mein nahi hote --- fast, free, deterministic.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q36: ``Mocking kya hai? pytest-django se kya mila?''}
+
+\textbf{Answer:} Mocking = external dependencies ko fake se replace karna (LLM calls, search, vector store). pytest-django: test DB (real DB untouched), test client (API calls bina server), fixtures (setup/teardown). Is project mein \texttt{mock\_research\_graph} fixture LangGraph ko stub se replace karta hai --- canned state return.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q37: ``Test DB real data kyun nahi chhuta?''}
+
+\textbf{Answer:} pytest-django har test ke liye \textbf{throwaway test database} banata hai (transactions rollback) --- real \texttt{db.sqlite3} untouched rehta hai. Tests isliye safe hain chalao kabhi bhi. Ye ``isolated test environment'' principle hai.
+\end{interviewbox}
+
+\subsection{Benchmarking \& Evaluation}
+
+\begin{interviewbox}
+\textbf{Q38: ``Benchmark kya measure karta hai is project mein?''}
+
+\textbf{Answer:} Do dimensions: \textbf{Depth} (comprehensiveness, detail, technical accuracy) aur \textbf{Verifiability} (citations, facts vs opinions). Single-agent baseline (1 LLM call) vs multi-agent pipeline (4 nodes) --- same topic, same judge, side-by-side. LLM-as-judge + heuristic fallback dono.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q39: ``LLM-as-judge ki problems?''}
+
+\textbf{Answer:} (1) \textbf{Bias} --- order bias (pehla report favor), position bias, self-preference (same model judge apne jaise output pasand karta hai); (2) \textbf{Inconsistency} --- same input alag scores; (3) \textbf{Expense}. Mitigation: side-by-side scoring, multiple judges, heuristic cross-check. Is project mein heuristic fallback hai --- judge fail hone par regex-based scoring.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q40: ``Is benchmark ka result kya nikla?''}
+
+\textbf{Answer:} Ek run mein \textbf{SINGLE\_AGENT\_SUPERIOR} aaya (depth 9 vs 8, verifiability 8 vs 7) --- Writer ko analyst ka excerpt-heavy output mila tha. Par ek run statistically meaningless hai --- pehla end-to-end run (solid-state) mein multi-agent ne behtareen report banayi. Ye hi evaluation ka point hai: \textbf{measure, don't assume}.
+\end{interviewbox}
+
+\subsection{System Design}
+
+\begin{interviewbox}
+\textbf{Q41: ``Is system ko 100 concurrent users ke liye kya change karna padega?''}
+
+\textbf{Answer:} (1) \textbf{SQLite $\rightarrow$ PostgreSQL} --- concurrent writes; (2) \textbf{Sync pipeline $\rightarrow$ async} --- 176s ka request thread block nahi karega; task queue (Celery/Redis) + polling/webhook; (3) \textbf{Streamlit $\rightarrow$ multi-instance} + load balancer + sticky sessions ya stateless frontend; (4) \textbf{Local ChromaDB $\rightarrow$ managed vector DB}; (5) Rate limiting + caching (same topics ka result cache).
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q42: ``Is system mein bottleneck kya hai?''}
+
+\textbf{Answer:} 3 bottlenecks: (1) \textbf{Pipeline latency} --- 4+ sequential LLM calls + Tavily + embedding = 176s end-to-end; (2) \textbf{Embedding} --- sentence-transformers CPU par, ingestion slow; (3) \textbf{LLM rate limits} --- concurrent users par Groq quota. Fixes: parallel sub-queries, batch embedding, async architecture.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q43: ``Data flow diagram banao is system ka.''}
+
+\textbf{Answer:} (Board par draw karo) User/Client $\rightarrow$ Interface (Streamlit/MCP/Django) $\rightarrow$ research\_graph.invoke/stream $\rightarrow$ nodes: researcher (Tavily + RAG) $\rightarrow$ analyst $\rightarrow$ fact\_checker $\rightarrow$ [loop] $\rightarrow$ writer $\rightarrow$ final\_report $\rightarrow$ UI + ChromaDB store + Django DB. Har node state update karta hai, conditional edge fact-check par decide karta hai.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q44: ``Security concerns is project mein?''}
+
+\textbf{Answer:} (1) \textbf{API keys} --- .env gitignored, 3-level fallback; (2) \textbf{Prompt injection} --- untrusted sources; (3) \textbf{CORS} --- Django mein django-cors-headers, allowlist needed; (4) \textbf{Input validation} --- serializer required fields; (5) \textbf{Rate limiting} --- production mein add karna. Security interview mein in points ko bolna hi enough hai.
+\end{interviewbox}
+
+\subsection{Behavioral \& Project Story}
+
+\begin{interviewbox}
+\textbf{Q45: ``Tell me about this project (30 sec elevator pitch).''}
+
+\textbf{Answer:} ``Maine ek \textbf{multi-agent research orchestration system} banaya hai jo kisi bhi topic par deep, verified research reports generate karta hai. Architecture: LangGraph-based pipeline --- researcher web search karta hai (Tavily), analyst synthesis, fact-checker claims verify karta hai aur revision loop chala sakta hai, writer final report likhta hai. Teen interfaces: Streamlit UI (real-time streaming), MCP server (AI assistants connect karein), aur Django REST API. RAG memory: PDFs + past research ChromaDB mein. Aur maine ek benchmark suite bhi banaya hai jo single vs multi-agent quality measure karta hai --- depth aur verifiability par.'' (30 sec mein ye perfect hai)
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q46: ``Sabse difficult problem kya thi?''}
+
+\textbf{Answer:} (STAR format) \textbf{Situation:} Multi-agent pipeline benchmark mein haar gayi single-agent se. \textbf{Task:} Pata karo kyun aur fix karo. \textbf{Action:} Outputs compare kiye --- writer ko analyst ka raw excerpt-heavy brief mila tha, synthesis nahi. Root cause: handoff quality. \textbf{Result:} Fix proposals --- analyst few-shot + writer synthesis instructions + multi-topic benchmark. Ye dikhata hai ki main measure karta hoon aur root cause analysis karta hoon.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q47: ``Agar dobara banate to kya alag karte?''}
+
+\textbf{Answer:} (1) \textbf{Evaluation-first} --- pehle benchmark infra, phir features; (2) \textbf{Async pipeline} --- synchronous 176s se task queue; (3) \textbf{Structured agent outputs} --- pydantic schemas instead of free text; (4) \textbf{Tracing} --- LangSmith/Langfuse observability; (5) \textbf{Versioned prompts} --- prompt registry + A/B testing.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q48: ``Team mein kaise kaam karte? Conflicts kaise handle?''}
+
+\textbf{Answer:} (Project context) Is project mein code review habits: modules alag (agents/, rag/, graph/) isliye merge conflicts kam. Technical decisions: benchmark se data lekar decision (model choice, architecture) --- \textbf{data-driven disagreements}. Real team story bhi ready rakho: college projects/competitions se.
+\end{interviewbox}
+
+\section{Whiteboard Problems --- Is Project Se Nikale Gaye}
+
+\begin{storybox}
+Interviewers is project ko dekh ke inme se koi bhi whiteboard problem puch sakte hain. Har problem ka \textbf{approach} + \textbf{is project se connection} neeche hai. Pattern yaad rakho: clarify $\rightarrow$ design $\rightarrow$ trade-offs $\rightarrow$ code.
+\end{storybox}
+
+\subsection{Problem 1: Design a RAG System}
+
+\begin{interviewbox}
+\textbf{Problem:} ``Ek RAG system design karo jo 10,000 PDFs index kare aur real-time queries answer kare.''
+
+\textbf{Approach:}
+\begin{enumerate}[label=\arabic*.]
+\item \textbf{Clarify:} Data type (PDFs), scale (10k), latency (real-time), languages.
+\item \textbf{Ingestion pipeline:} PDF parser $\rightarrow$ chunking (recursive, 500-1000 chars, overlap) $\rightarrow$ embedding (batch) $\rightarrow$ vector store (Pinecone/Qdrant) + metadata store (PostgreSQL).
+\item \textbf{Query pipeline:} Query $\rightarrow$ embedding $\rightarrow$ hybrid search (vector + keyword) $\rightarrow$ re-ranking (cross-encoder) $\rightarrow$ LLM with citations.
+\item \textbf{Evaluation:} Retrieval quality (recall@k), answer quality (LLM judge), latency SLO.
+\end{enumerate}
+
+\textbf{Project connection:} ``Is project mein simplified version banaya --- ChromaDB + cosine search, k=5/3. Production version mein hybrid search + re-ranking add karta.''
+\end{interviewbox}
+
+\subsection{Problem 2: Design a Multi-Agent Orchestrator}
+
+\begin{interviewbox}
+\textbf{Problem:} ``Ek system design karo jisme 5 AI agents milkar complex task karein.''
+
+\textbf{Approach:}
+\begin{enumerate}[label=\arabic*.]
+\item \textbf{State contract} --- shared schema (topic, research\_data, analysis, verdict, report).
+\item \textbf{Graph topology} --- nodes, edges, conditional edges; loop guard (max iterations).
+\item \textbf{Handoff quality} --- har agent ka output schema-validated.
+\item \textbf{Failure handling} --- retries, fallbacks, degraded mode.
+\item \textbf{Observability} --- tracing, per-node latency, cost tracking.
+\end{enumerate}
+
+\textbf{Project connection:} ``Exactly ye architecture maine LangGraph mein banaya --- 4 nodes, conditional fact-check loop, MAX\_REVISIONS guard. Failure handling try/except se.''
+\end{interviewbox}
+
+\subsection{Problem 3: Rate Limiting Design}
+
+\begin{interviewbox}
+\textbf{Problem:} ``LLM API calls ko rate limit karo --- 1000 users, 10 calls/sec budget.''
+
+\textbf{Approach:} Token bucket (smooth burst control) ya fixed window (simple) --- Redis counter, per-user + global buckets, queue with retry/backoff, 429 responses with Retry-After. Priority: paid users vs free.
+
+\textbf{Project connection:} ``Is project mein abhi simple try/except fallback hai; production mein Redis-based token bucket add karta.''
+\end{interviewbox}

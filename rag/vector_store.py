@@ -93,14 +93,33 @@ def store_research_session(topic: str, research_data: list[str], report: str) ->
 
 def get_collection_stats() -> dict:
     stats = {}
-    for name in ["research_docs", "past_research"]:
-        try:
-            vs = get_vectorstore(name)
-            collection = vs._collection
-            stats[name] = collection.count()
-        except Exception:
-            stats[name] = 0
+    try:
+        import chromadb
+        client = chromadb.PersistentClient(path=CHROMA_PERSIST_DIR)
+        for name in ["research_docs", "past_research"]:
+            try:
+                coll = client.get_collection(name)
+                stats[name] = coll.count()
+            except Exception:
+                stats[name] = 0
+    except Exception:
+        stats = {"research_docs": 0, "past_research": 0}
     return stats
+
+def search_with_scores(query: str, collection_name: str = "research_docs", k: int = 5) -> list[dict]:
+    try:
+        vs = get_vectorstore(collection_name)
+        results = vs.similarity_search_with_score(query, k=k)
+        return [
+            {
+                "content": doc.page_content,
+                "metadata": doc.metadata,
+                "score": round(float(score), 4),
+            }
+            for doc, score in results
+        ]
+    except Exception:
+        return []
 
 def clear_collection(collection_name: str):
     try:

@@ -1,0 +1,145 @@
+\newpage
+
+% ######################################################################
+% PART XVII: BACKEND FILES + REVISION PLAN
+% ######################################################################
+\part{Backend Files + Daily Revision Plan}
+
+% ######################################################################
+% SECTION 67: REMAINING BACKEND FILES
+% ######################################################################
+\section{Remaining Backend Files --- Serializers, URLs, Conftest}
+
+\subsection{serializers.py --- Full Walkthrough}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={serializers.py --- dono serializers}]
+from rest_framework import serializers
+from .models import ResearchSession, BenchmarkEvaluation
+
+class ResearchSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResearchSession
+        fields = ["id", "topic", "report", "messages",
+                  "sources_count", "revision_count", "created_at"]
+
+class BenchmarkEvaluationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BenchmarkEvaluation
+        fields = ["id", "topic", "single_agent_report",
+                  "multi_agent_report", "single_agent_depth",
+                  "multi_agent_depth", "single_agent_verifiability",
+                  "multi_agent_verifiability", "verdict", "created_at"]
+\end{lstlisting}
+
+\textbf{Design:} (1) \texttt{ModelSerializer} --- model fields se auto field mapping + validation; (2) Explicit \texttt{fields} list --- kya expose karna hai control (user field exclude); (3) \texttt{user} intentionally serializer mein nahi --- request se attach hota hai, client se nahi. Interview point: ``Serializer = API ka contract --- kya dikhega, kya validation, kya chhupa hoga, sab yahan control hota hai.''
+\end{codestorybox}
+
+\subsection{urls.py --- Full Walkthrough}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={api/urls.py}]
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("health/", views.HealthCheckView.as_view()),
+    path("auth/register/", views.RegisterView.as_view()),
+    path("auth/login/", views.LoginView.as_view()),
+    path("research/execute/", views.ExecuteResearchAPIView.as_view()),
+    path("research/benchmark/", views.BenchmarkAPIView.as_view()),
+    path("benchmark/history/", views.BenchmarkHistoryAPIView.as_view()),
+]
+\end{lstlisting}
+
+\textbf{Routing structure:} (1) \texttt{health/} top-level; (2) \texttt{auth/} namespace --- register/login; (3) \texttt{research/} namespace --- execute/benchmark; (4) \texttt{benchmark/history/} read-only. Ye REST-consistent nested design hai. Main urls.py mein \texttt{path("api/", include("api.urls"))} --- prefix ek jagah.
+\end{codestorybox}
+
+\subsection{conftest.py --- Mocking Infrastructure}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={conftest.py --- fixtures}]
+import pytest
+from unittest.mock import patch, MagicMock
+
+@pytest.fixture
+def mock_research_graph():
+    mock = MagicMock()
+    mock.invoke.return_value = {
+        "final_report": "# Report\n\nTest content",
+        "messages": ["Agent ran"],
+    }
+    with patch("graph.workflow.research_graph", mock):
+        yield mock
+
+@pytest.fixture
+def exploding_research_graph():
+    mock = MagicMock()
+    mock.invoke.side_effect = RuntimeError("pipeline crashed")
+    with patch("graph.workflow.research_graph", mock):
+        yield mock
+
+@pytest.fixture
+def mock_benchmark():
+    with patch("benchmark.evaluator.run_single_agent_baseline",
+               return_value="# Baseline report"),
+         patch("benchmark.evaluator.evaluate_outputs",
+               return_value={"single_agent_depth": 9, ...}):
+        yield
+\end{lstlisting}
+
+\textbf{Fixture design:} (1) \texttt{MagicMock} --- auto attributes/methods; (2) \texttt{side\_effect} --- exception simulation (error paths); (3) \texttt{return\_value} --- success paths; (4) \texttt{patch} context manager --- test ke baad automatic restore. Interview point: ``Fixtures = test setup ka reusable building block. Mocking se tests fast (9s), free, aur deterministic hote hain --- real API calls sirf manual E2E mein.''
+\end{codestorybox}
+
+\subsection{Settings/wsgi/asgi/manage.py --- Quick Tour}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=bashstyle, caption={Django entry files}]
+# manage.py: CLI entry (runserver, migrate, shell)
+python manage.py runserver 8001
+
+# settings.py: INSTALLED_APPS (rest_framework, corsheaders, api),
+# DATABASES (sqlite3), CORS_ALLOWED_ORIGINS, rest_framework auth classes
+
+# wsgi.py: sync WSGI app (Gunicorn production ke liye)
+# asgi.py: async ASGI app (uvicorn / real-time ke liye)
+\end{lstlisting}
+
+\textbf{Interview points:} (1) WSGI vs ASGI --- sync vs async server interface; (2) INSTALLED\_APPS = Django ka plugin system; (3) CORS config --- Streamlit origin allow; (4) REST framework settings --- DefaultAuthentication (token/session).
+\end{codestorybox}
+
+% ######################################################################
+% SECTION 68: DAILY REVISION PLAN
+% ######################################################################
+\section{Daily Revision Plan --- Interview Tak}
+
+\begin{longtable}{p{3.2cm} p{10.8cm}}
+\toprule
+\textbf{Day} & \textbf{Revision focus} \\
+\midrule
+Day 1 & Parts I-III --- setup, concepts, code walkthrough (2x speed read) \\
+Day 2 & Part IV --- deep dives + prompts verbatim + system design \\
+Day 3 & Part V --- 68 Q\&A (bol ke practice) + pitches + whiteboard \\
+Day 4 & Parts VI-VII --- API reference, tests, deployment, glossary \\
+Day 5 & Parts VIII-IX --- transformer theory, debugging stories, 30 more Q\&A \\
+Day 6 & Parts X-XI --- DSA patterns, core CS, demo scripts, mock interview \\
+Day 7 & Parts XII-XVI --- Python deep dive, quick-fire, cheat card, full mock \\
+Daily & 30-min tutorial script 1x + 10 numbers + 4 stories \\
+\bottomrule
+\end{longtable}
+
+\begin{memorybox}
+\textbf{Interview day checklist:}
+\begin{enumerate}[label=\arabic*.]
+\item Numbers yaad karo (cheat card section 66).
+\item 30-sec pitch mirror ke saamne 2 baar.
+\item Ek mock interview kisi dost ke saath.
+\item Laptop ready: code + demo + tests chalne ready.
+\item Setup: local server ports free, API keys loaded, internet on.
+\item Deep breath. \textbf{Tum taiyaar ho.}
+\end{enumerate}
+\end{memorybox}
+
+\begin{storybox}
+\textbf{17 parts, 68 sections, 150+ pages.} Har logic explain kiya, har code line samjhaya, har interview sawaal ka jawab diya --- sab Hinglish mein, story style mein. Is document ne aapko \textbf{gyaan} diya hai; ab \textbf{confident} bolo. Interview sirf ek conversation hai jisme aap apna kaam dikha rahe ho. \textbf{All the best!} \faGraduationCap
+\end{storybox}

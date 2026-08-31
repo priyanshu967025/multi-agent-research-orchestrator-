@@ -1,0 +1,236 @@
+\newpage
+
+% ######################################################################
+% PART XV: EXERCISES & WHAT-IF
+% ######################################################################
+\part{Exercises \& What-If Scenarios}
+
+% ######################################################################
+% SECTION 59: app.py + Models Full Walkthrough
+% ######################################################################
+\section{app.py + Models --- Jo Abhi Tak Full Nahi Dekha}
+
+\subsection{app.py --- Session State Flow}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={app.py --- key flow}]
+# 1. Page config + theme
+st.set_page_config(page_title="Multi-Agent Research", layout="wide")
+
+# 2. Session state lazy init
+if "theme" not in st.session_state:
+    st.session_state.theme = "light"
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "final_report" not in st.session_state:
+    st.session_state.final_report = ""
+
+# 3. Sidebar: theme picker + PDF upload
+theme = st.sidebar.selectbox("Theme", ["light", "dark"],
+                             index=["light","dark"].index(st.session_state.theme))
+if theme != st.session_state.theme:
+    st.session_state.theme = theme
+    st.rerun()          # theme apply karne ke liye rerun
+
+uploaded = st.sidebar.file_uploader("Upload PDF", type=["pdf"])
+if uploaded:
+    save + ingest -> st.success(f"{n} chunks added")
+
+# 4. Topic input + Run
+topic = st.text_input("Research topic")
+if st.button("Run") and topic:
+    # reset state
+    st.session_state.messages = []
+    # stream pipeline
+    for event in research_graph.stream(initial_state(topic)):
+        for node, output in event.items():
+            st.session_state.agent_statuses[node] = "done"
+            with st.chat_message(node):
+                st.write(output.get("messages", [""])[-1])
+    st.session_state.final_report = ... # last state se
+
+# 5. Report render + download
+if st.session_state.final_report:
+    st.markdown(st.session_state.final_report)
+    st.download_button("Download MD", ..., file_name="report.md")
+\end{lstlisting}
+
+\textbf{Interview points:} (1) \texttt{st.rerun()} theme change par --- Streamlit idiom; (2) \texttt{file\_uploader} + ingest --- RAG loop close; (3) chat-message styling se agent progress visual; (4) \texttt{download\_button} --- result export.
+\end{codestorybox}
+
+\subsection{backend/api/models.py --- Full Walkthrough}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={models.py --- dono models}]
+from django.db import models
+from django.contrib.auth.models import User
+
+class ResearchSession(models.Model):
+    topic = models.CharField(max_length=500)
+    report = models.TextField()
+    messages = models.JSONField(default=list)     # agent log
+    user = models.ForeignKey(User, null=True, blank=True,
+                             on_delete=models.SET_NULL)
+    sources_count = models.IntegerField(default=0)
+    revision_count = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Session: {self.topic[:50]}"
+
+class BenchmarkEvaluation(models.Model):
+    topic = models.CharField(max_length=500)
+    single_agent_report = models.TextField()
+    multi_agent_report = models.TextField()
+    single_agent_depth = models.IntegerField()
+    multi_agent_depth = models.IntegerField()
+    single_agent_verifiability = models.IntegerField()
+    multi_agent_verifiability = models.IntegerField()
+    verdict = models.CharField(max_length=40)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Benchmark: {self.topic[:50]} ({self.verdict})"
+\end{lstlisting}
+
+\textbf{Design decisions:}
+\begin{itemize}
+\item \texttt{JSONField} messages --- flexible list storage (no separate table needed).
+\item \texttt{on\_delete=models.SET\_NULL} --- user delete ho to session rahe (data loss nahi).
+\item \texttt{null=True, blank=True} --- anonymous sessions allowed.
+\item \texttt{auto\_now\_add} --- created\_at automatic, immutable.
+\item IntegerFields for scores --- 0-10 scale, DB-level simplicity.
+\end{itemize}
+\end{codestorybox}
+
+% ######################################################################
+% SECTION 60: BUILD-IT-YOURSELF EXERCISES
+% ######################################################################
+\section{Build-It-Yourself --- Mini Versions With Solutions}
+
+\begin{storybox}
+Interview practice ke liye: project ke 4 core components ko \textbf{zero-dependency} mini versions mein implement karo (30-45 min each). Ye exercises aapki understanding ko prove karte hain --- agar mini version bana sakte ho, to bada version samajhte ho.
+\end{storybox}
+
+\subsection{Exercise 1: Mini Vector Store}
+
+\begin{codestorybox}
+\textbf{Task:} Bina ChromaDB ke, ek class jo documents store kare aur cosine similarity se top-k retrieve kare. \textbf{Hint:} numpy dot products. \textbf{Solution:}
+
+\begin{lstlisting}[style=pythonstyle, caption={mini vector store}]
+import numpy as np
+
+class MiniVectorStore:
+    def __init__(self):
+        self.docs = []      # list[str]
+        self.vectors = []   # list[np.ndarray]
+
+    def add(self, text: str, vector: np.ndarray):
+        self.docs.append(text)
+        self.vectors.append(vector / np.linalg.norm(vector))
+
+    def search(self, query_vec: np.ndarray, k: int = 3) -> list[str]:
+        q = query_vec / np.linalg.norm(query_vec)
+        scores = [float(v @ q) for v in self.vectors]  # cosine
+        idx = sorted(range(len(scores)), key=lambda i: -scores[i])[:k]
+        return [self.docs[i] for i in idx]
+
+# use:
+# store.add("RAG is retrieval augmented generation", embed("RAG..."))
+# store.search(embed("what is RAG"), k=2)
+\end{lstlisting}
+
+\textbf{Key concepts proven:} cosine similarity = normalized dot product; top-k sorting; O(n) brute force (HNSW production mein).
+\end{codestorybox}
+
+\subsection{Exercise 2: Mini Agent Loop}
+
+\begin{codestorybox}
+\textbf{Task:} Bina LangGraph ke, ek simple loop: research $\rightarrow$ analyze $\rightarrow$ verify $\rightarrow$ revise (max 3). \textbf{Solution:}
+
+\begin{lstlisting}[style=pythonstyle, caption={mini agent loop}]
+def run_pipeline(topic, call_llm, search):
+    state = {"topic": topic, "sources": [], "analysis": "",
+             "passed": False, "revisions": 0}
+    while not state["passed"] and state["revisions"] <= 3:
+        state["sources"] = search(topic)          # researcher
+        state["analysis"] = call_llm("analyze", state["sources"])
+        verdict = call_llm("verify", state["analysis"], state["sources"])
+        state["passed"] = "PASSED" in verdict.upper()
+        state["revisions"] += 1
+    return {"report": call_llm("write", state["analysis"], state["sources"]),
+            "revisions": state["revisions"]}
+\end{lstlisting}
+
+\textbf{Interview question:} ``LangGraph isse kya better karta hai?'' --- streaming, visualization, parallelism, checkpointing, declarative flow.
+\end{codestorybox}
+
+\subsection{Exercise 3: Mini Benchmark Judge}
+
+\begin{codestorybox}
+\textbf{Task:} Do reports ko score karne wala heuristic judge (bina LLM ke). \textbf{Solution:}
+
+\begin{lstlisting}[style=pythonstyle, caption={mini heuristic judge}]
+import re
+
+def judge(report: str) -> dict:
+    sections = len(re.findall(r'^#{1,3} ', report, re.M))
+    bullets = len(re.findall(r'^[-*] ', report, re.M))
+    words = len(report.split())
+    citations = len(re.findall(r'\[\d+\]|https?://', report))
+    depth = min(10, sections // 3 + bullets // 5 + words // 300)
+    verifiability = min(10, citations * 2)
+    return {"depth": depth, "verifiability": verifiability}
+\end{lstlisting}
+
+\textbf{Interview point:} Heuristics deterministic hain (tests ke liye), LLM judge quality deta hai --- is project ka evaluator dono combine karta hai (LLM first, heuristic fallback).
+\end{codestorybox}
+
+% ######################################################################
+% SECTION 61: WHAT-IF SCENARIOS
+% ######################################################################
+\section{What-If Scenarios --- Aage Badhne Ke Raaste}
+
+\subsection{Scenario 1: Agent Memory Add Karna}
+
+\begin{conceptbox}
+\textbf{Problem:} Agents har run mein past se forget karte hain (sirf rag\_context\_past\_research milta hai).
+
+\textbf{Solution sketch:} (1) \textbf{Short-term:} LangGraph checkpointing --- har run ki state save, resume; (2) \textbf{Long-term:} Agent-specific summaries ChromaDB mein (``what did analyst learn about topic X''), retrieval on next run; (3) \textbf{Conversation memory:} add\_messages history pipeline ko. Interview answer: ``Memory = retrieval over past states + summaries, ek flag ke saath enable/disable.''
+\end{conceptbox}
+
+\subsection{Scenario 2: Planner Agent Add Karna}
+
+\begin{conceptbox}
+\textbf{Problem:} Complex topics (``AI in healthcare AND finance'') ek hi researcher pass mein poori nahi cover hote.
+
+\textbf{Solution sketch:} (1) \textbf{Planner node} graph ke START par --- topic ko sub-tasks mein toda (``healthcare AI'', ``finance AI'', ``joint analysis''); (2) Har sub-task ka apna mini-pipeline (parallel fan-out); (3) \textbf{Aggregator} node --- sub-reports ko final report mein merge. Interview point: ``Hierarchical multi-agent --- plan $\rightarrow$ execute $\rightarrow$ aggregate. LangGraph fan-out/fan-in edges se possible.''
+\end{conceptbox}
+
+\subsection{Scenario 3: Multi-Hop RAG}
+
+\begin{conceptbox}
+\textbf{Problem:} Answer ke liye 2+ documents ka combination chahiye (``Company X ka revenue kaun sa product se aaya'' --- pehle product list, phir revenue).
+
+\textbf{Solution sketch:} (1) Round 1: retrieve + answer attempt with confidence; (2) Low confidence $\rightarrow$ extracted entities se follow-up query; (3) Round 2: retrieve + combine. Loop guard max 3. Interview line: ``Naive RAG single-hop hai; multi-hop query decomposition se complex reasoning improve hoti hai --- same revision-loop pattern se implement hota hai jo fact-checker mein hai.''
+\end{conceptbox}
+
+\subsection{Scenario 4: Real-Time Streaming Reports}
+
+\begin{conceptbox}
+\textbf{Problem:} 176s wait --- user ko real-time partial report dikhao.
+
+\textbf{Solution sketch:} (1) Har node ka output stream (already \texttt{graph.stream}); (2) UI mein node-by-node sections render (researcher ke sources, analyst brief, etc.); (3) Writer ka \textbf{token-level streaming} (Groq streaming) --- last section live type hote dikhe. Interview point: ``Progressive disclosure --- user ko har step ka value dikhta hai, wait boring nahi.''
+\end{conceptbox}
+
+\subsection{Scenario 5: Multi-Language Support}
+
+\begin{conceptbox}
+\textbf{Problem:} Hindi/Hinglish queries par reports English mein.
+
+\textbf{Solution sketch:} (1) \textbf{Embedding model:} multilingual (multilingual-e5 / bge-m3) --- cross-lingual retrieval; (2) \textbf{Language param:} writer prompt mein ``report language = Hindi/English''; (3) \textbf{Translation layer} optional. Interview point: ``Embedding model change = retrieval quality change --- benchmark se verify karna zaroori (Retrieval eval), assumptions nahi.''
+\end{conceptbox}
+
+\begin{memorybox}
+\textbf{Final exercise challenge:} In 5 scenarios mein se 2 ko implement karke demo banao (even paper sketch enough) --- interview mein ``I've thought about scaling this'' ka proof milega. Koi bhi ``what if'' question aaye --- answer ready hai.
+\end{memorybox}

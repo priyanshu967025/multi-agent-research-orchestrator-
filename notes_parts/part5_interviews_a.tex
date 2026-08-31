@@ -1,0 +1,169 @@
+\newpage
+
+% ######################################################################
+% PART V: INTERVIEW PREP
+% ######################################################################
+\part{Interview Prep --- 60+ Questions, Full Answers}
+
+% ######################################################################
+% SECTION 26: Q&A BANK PART 1
+% ######################################################################
+\section{Q\&A Bank Part 1 --- Fundamentals \& LLMs}
+
+\begin{storybox}
+Ye section 60+ interview questions ka bank hai --- har question ka \textbf{pura answer} is project ke context mein. Pattern: pehle \textbf{concept} ka clean answer, phir \textbf{project connection} (``is project mein kahan use hua''). Interviewer ko ye combination pasand aati hai --- theory + practice.
+\end{storybox}
+
+\subsection{LLM Fundamentals}
+
+\begin{interviewbox}
+\textbf{Q1: ``LLM kya hai aur kaise kaam karta hai? Simple words mein.''}
+
+\textbf{Answer:} LLM (Large Language Model) ek deep neural network hai jo \textbf{billions of parameters} ke saath text ka pattern seekhta hai. Training: internet par se trillions of words dekhe, har word ka next word predict karna seekha (self-supervised learning). Inference: aap text dete ho, model token-by-token next word generate karta hai. Is project mein \textbf{GPT-OSS-120B} (120 billion parameters) use kiya hai via Groq API --- har agent ek prompt dekar model se output leta hai.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q2: ``Token kya hota hai?''}
+
+\textbf{Answer:} Token text ki smallest unit hai jo model process karta hai --- word ka part. ``Hello world'' $\approx$ 2 tokens; ek page text $\approx$ 1000-1500 tokens. Model \textbf{token-level} par kaam karta hai, character-level par nahi. Cost aur context window dono tokens mein measure hote hain. Is project mein context budget: writer ko top-8 sources + analysis bhejte hain taaki tokens limit mein rahein.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q3: ``Temperature kya karta hai? 0 vs 1?''}
+
+\textbf{Answer:} Temperature model ki \textbf{randomness} control karta hai. Low (0-0.2): deterministic, factual output --- model hamesha most-likely token leta hai. High (0.7-1): creative, varied output. Is project mein: fact-checker 0.1 (factual), analyst 0.2 (aggregation), researcher 0.3 (thodi diversity queries mein), writer 0.4 (prose thoda natural). Har agent ka temperature \textbf{task ke nature} se decide hota hai.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q4: ``Context window kya hai? Agar zyada text do to?''}
+
+\textbf{Answer:} Context window = model ek baar mein kitna text dekh sakta hai (jaise GPT-OSS-120B ka 128K tokens). Zyada denge to ya to truncate hoga, ya error, ya cost explode. Isliye is project mein \textbf{context discipline}: researcher 15 sources store karta hai, analyst sirf top-10 leta hai aur dense brief banata hai, writer sirf brief + top-8 sources dekhta hai. Ye layered compression hai.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q5: ``Hallucination kya hai aur is project mein kaise control hua?''}
+
+\textbf{Answer:} Hallucination = model ka aisa content jo facts se match nahi karta, par confident lagta hai. Control ke 3 layers is project mein: (1) \textbf{RAG} --- model ko sources do taaki wo answer copy kare, invent na kare; (2) \textbf{Fact-checker} --- closed-world assumption: har claim sirf diye gaye sources se VERIFIED hota hai; (3) \textbf{Revision loop} --- unverified claims milne par naye search queries se research improve hoti hai.
+\end{interviewbox}
+
+\subsection{Prompting}
+
+\begin{interviewbox}
+\textbf{Q6: ``Zero-shot, few-shot, chain-of-thought --- kya difference?''}
+
+\textbf{Answer:} Zero-shot: bina example ke task do (is project ke zyada prompts aise hain). Few-shot: 2-3 examples do --- output format stabilize hota hai. Chain-of-thought: model ko step-by-step sochne ko kaho --- complex reasoning improve hota hai. Is project mein fact-checker ko ``VERDICT: PASSED/NEEDS\_REVISION'' last line par format diya hai --- structured output jo parse aasan hai.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q7: ``System prompt vs user prompt?''}
+
+\textbf{Answer:} System prompt: model ki \textbf{role/behavior} define karta hai (persistent instructions). User prompt: actual task/data. Is project mein har agent ka \texttt{SYSTEM\_PROMPT} constant hai (role + output format), aur \texttt{HumanMessage} mein topic + data jata hai. Ye separation code ko clean rakhta hai aur prompts ko reusable.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q8: ``Prompt injection kya hai? Is project vulnerable hai?''}
+
+\textbf{Answer:} Prompt injection = user ke data ke through model ko system instructions ignore karwana. Example: source content mein ``ignore previous instructions'' likha ho. Is project mein risk: Tavily sources aur PDFs untrusted hain --- unka content analyst/writer prompts mein jata hai. Mitigation: (1) sources sirf \textbf{data section} mein jate hain, instructions se alag; (2) fact-checker closed-world hai --- claims sirf sources se verify; (3) Production mein input sanitization + output filtering add karna chahiye.
+\end{interviewbox}
+
+\subsection{Retrieval-Augmented Generation (RAG)}
+
+\begin{interviewbox}
+\textbf{Q9: ``RAG kya hai? Bina RAG ke LLM ka problem kya?''}
+
+\textbf{Answer:} RAG = Retrieval-Augmented Generation: pehle relevant documents \textbf{retrieve} karo, phir unke saath LLM se answer generate karo. Bina RAG ke LLM: (1) apne training data tak limited (jaise 2024 tak ka); (2) private documents nahi jaanta; (3) hallucinate karta hai. RAG 3 problem solve karta hai: \textbf{freshness} (naye docs), \textbf{privacy} (private docs), \textbf{accuracy} (source-backed answers). Is project mein: PDFs + purani research ChromaDB mein hain, query par top-k chunks retrieve hote hain.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q10: ``RAG pipeline ke steps batao.''}
+
+\textbf{Answer:} 5 steps: (1) \textbf{Ingestion} --- PDF load (PyPDFLoader), chunk (RecursiveCharacterTextSplitter 1000/200), embed (all-MiniLM-L6-v2), store (ChromaDB). (2) \textbf{Query understanding} --- user query ko embed karo. (3) \textbf{Retrieval} --- cosine similarity, top-k (k=5 docs, k=3 past). (4) \textbf{Augmentation} --- retrieved chunks + query ko prompt mein rakho. (5) \textbf{Generation} --- LLM answer. Is project mein \texttt{rag/vector\_store.py} ye sab karta hai.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q11: ``Chunk size chhota/ bada hone se kya farak padta hai?''}
+
+\textbf{Answer:} Chhota chunk (200 chars): precise retrieval par context adhura --- answer incomplete. Bada chunk (5000): pura context par embedding dilute --- irrelevant chunk bhi match ho jata hai. Is project mein 1000 chars + 200 overlap: balance. Overlap important hai kyunki sentence chunk boundary par na kate.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q12: ``Embedding model kaise choose karte ho?''}
+
+\textbf{Answer:} 5 criteria: (1) \textbf{Dimension} --- 384 vs 1536: quality vs speed/memory; (2) \textbf{Language support} --- Hinglish/English docs ke liye multilingual chahiye; (3) \textbf{License/cost} --- open-source free vs paid API; (4) \textbf{Speed} --- CPU par chalna chahiye; (5) \textbf{Benchmark} --- MTEB scores. Is project mein all-MiniLM-L6-v2: 384-dim, 80MB, CPU-fast, free --- is scale ke liye perfect.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q13: ``Similarity search mein cosine similarity kyun, Euclidean kyun nahi?''}
+
+\textbf{Answer:} Cosine \textbf{direction} measure karta hai, magnitude nahi. Sentence embeddings mein magnitude (length of text) quality nahi batata --- do alag-length texts same meaning ke ho sakte hain. Cosine unhe similar dikhata hai, Euclidean distance unhe alag dikha sakta hai. Is project mein ChromaDB default cosine use karta hai.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q14: ``Vector database vs normal database (PostgreSQL)?''}
+
+\textbf{Answer:} Normal DB: exact match, range queries, transactions --- efficient for structured data. Vector DB: \textbf{similarity search} over high-dimensional vectors --- HNSW index, cosine distance. PostgreSQL mein pgvector extension se vectors bhi aate hain, par dedicated vector DB (ChromaDB) lightweight + simple API deta hai. Is project mein SQLite (Django) structured data ke liye, ChromaDB vectors ke liye --- \textbf{two databases, two jobs}.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q15: ``Retrieval fail ho jaye to kya hoga?''}
+
+\textbf{Answer:} Is project mein graceful degradation: (1) ChromaDB unavailable $\rightarrow$ \texttt{try/except} $\rightarrow$ \texttt{rag\_context} empty; (2) Tavily key missing $\rightarrow$ notice message; (3) LLM fail $\rightarrow$ fallback text. System kabhi crash nahi karta --- hamesha best-effort output deta hai. Ye production mindset dikhata hai.
+\end{interviewbox}
+
+\subsection{Multi-Agent Systems}
+
+\begin{interviewbox}
+\textbf{Q16: ``Single agent vs multi-agent? Kab multi-agent use karna chahiye?''}
+
+\textbf{Answer:} Multi-agent tab jab task ke \textbf{alag specializations} hain aur \textbf{quality control} chahiye. Is project mein: researcher (search), analyst (synthesis), fact-checker (verification), writer (prose) --- har ek apne prompt, temperature, data contract ke saath. Fayde: modular, testable, hallucination control. Nuksan: latency (4+ LLM calls), cost, handoff quality risk --- jo is project ke benchmark mein dikha (ek run mein single-agent jeet gaya).
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q17: ``Agents aapas mein kaise communicate karte hain?''}
+
+\textbf{Answer:} Shared state (blackboard pattern) --- LangGraph ka \texttt{ResearchState} TypedDict. Har agent state padhta hai, apna output add karta hai, agla agent usse aage badhta hai. File/message-passing nahi --- \textbf{in-memory shared state}. Communication contract = state schema (\texttt{state/schema.py}).
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q18: ``Agar ek agent ka output kharab ho jaye?''}
+
+\textbf{Answer:} Is project mein 2 mechanisms: (1) \textbf{Fact-checker guard} --- analyst ka output verify hota hai, fail par revision loop; (2) \textbf{try/except fallbacks} --- har agent API fail hone par graceful output deta hai. Production mein aage: output validation schema + retry with backoff + human-in-the-loop.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q19: ``Is pipeline ko parallel karna possible hai?''}
+
+\textbf{Answer:} Haan --- 3 jagah: (1) Researcher ke 3 sub-queries parallel Tavily calls (asyncio/ThreadPool); (2) Multiple topics ek saath; (3) Inference batching. LangGraph mein \textbf{fan-out/fan-in} edges se parallel nodes add hote hain. Is project mein abhi sequential hai (simplicity), par architecture parallel banane ke liye ready hai.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q20: ``LangGraph bina use kiye bhi pipeline ban sakti thi. Framework kyun?''}
+
+\textbf{Answer:} Haan, manual loop se bhi chalti (maine dono dikhaye hain is document mein). Par LangGraph deta hai: (1) \textbf{conditional edges} --- revision loop cleanly express hota hai; (2) \textbf{streaming} --- real-time UI progress bina threading ke; (3) \textbf{checkpointing} --- state persistence; (4) \textbf{visualization/testing} tools. Manual loop mein ye sab khud banana padta.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q21: ``CrewAI/AutoGen se LangGraph kyon choose kiya?''}
+
+\textbf{Answer:} Compare kiya maine: CrewAI role-based hai --- aisa loop (verify $\rightarrow$ revise) force karna awkward. AutoGen conversational hai --- research pipeline ke liye less structured. LangGraph \textbf{graph-first} hai --- mera flow (conditional loop) naturally express hota hai. Choice use-case driven thi, trend-driven nahi.
+\end{interviewbox}
+
+\subsection{LLM APIs \& Providers}
+
+\begin{interviewbox}
+\textbf{Q22: ``Groq kya hai? OpenAI se kya difference?''}
+
+\textbf{Answer:} Groq ek inference provider hai jo \textbf{LPU (Language Processing Unit)} chips par LLMs chalata hai --- generation speed bahut fast (hundreds of tokens/sec). OpenAI/ChatGPT API similar models deta hai par cloud GPUs par. Is project mein Groq: fast + cheap (free tier) + OpenAI-compatible API. Cost/latency sensitive demo ke liye acha.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q23: ``API key ko code mein hardcode kyun nahi kiya?''}
+
+\textbf{Answer:} 3 reasons: (1) \textbf{Security} --- git history mein leak ho jata; (2) \textbf{Environment separation} --- dev/prod alag keys; (3) \textbf{12-factor app} --- config code se alag. Is project mein 3-level fallback: OS env $\rightarrow$ Streamlit secrets $\rightarrow$ .env file (config/setting.py ka \texttt{get\_env\_var}).
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q24: ``Rate limiting / quota khatam ho jaye to?''}
+
+\textbf{Answer:} Is project mein: try/except + fallback outputs --- system degraded mode mein chalta hai. Production: retry with exponential backoff, queue, caching, aur multiple provider fallback (Groq $\rightarrow$ OpenAI). Ye batao ki tum production readiness ke baare mein sochte ho.
+\end{interviewbox}

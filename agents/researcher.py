@@ -1,5 +1,6 @@
 from state.schema import ResearchState
-from config.setting import MODEL_NAME, get_groq_api_key, get_tavily_api_key, MAX_SEARCH_RESULTS
+from config.setting import get_tavily_api_key, MAX_SEARCH_RESULTS
+from config.providers import get_llm_with_fallback
 from langchain_core.messages import SystemMessage, HumanMessage
 
 QUERY_GEN_PROMPT = """You are a research query strategist.
@@ -14,32 +15,28 @@ FACT-CHECKER FEEDBACK:
 {feedback}"""
 
 def get_llm():
-    groq_key = get_groq_api_key()
-    from langchain_groq import ChatGroq
-    return ChatGroq(model=MODEL_NAME, temperature=0.3, groq_api_key=groq_key)
+    return get_llm_with_fallback(model=None, temperature=0.3)
 
 def researcher_node(state: ResearchState) -> dict:
     topic = state["topic"]
     revision_count = state.get("revision_count", 0)
 
     sub_queries = [topic]
-    groq_key = get_groq_api_key()
 
     try:
-        if groq_key:
-            llm = get_llm()
-            if revision_count > 0 and state.get("fact_check_result"):
-                prompt = REVISION_PROMPT.format(feedback=state["fact_check_result"])
-            else:
-                prompt = QUERY_GEN_PROMPT
+        llm = get_llm()
+        if revision_count > 0 and state.get("fact_check_result"):
+            prompt = REVISION_PROMPT.format(feedback=state["fact_check_result"])
+        else:
+            prompt = QUERY_GEN_PROMPT
 
-            query_response = llm.invoke([
-                SystemMessage(content=prompt),
-                HumanMessage(content=f"Topic: {topic}"),
-            ])
-            lines = [l.strip() for l in query_response.content.strip().split("\n") if l.strip()]
-            if lines:
-                sub_queries = lines[:3]
+        query_response = llm.invoke([
+            SystemMessage(content=prompt),
+            HumanMessage(content=f"Topic: {topic}"),
+        ])
+        lines = [l.strip() for l in query_response.content.strip().split("\n") if l.strip()]
+        if lines:
+            sub_queries = lines[:3]
     except Exception as e:
         sub_queries = [topic, f"{topic} latest research", f"{topic} analysis"]
 
@@ -58,8 +55,19 @@ def researcher_node(state: ResearchState) -> dict:
                 except Exception as ex:
                     print(f"Tavily search error for query '{query}': {ex}")
                     continue
-        else:
-            all_results.append("[Notice] Tavily API Key not found. Please set TAVILY_API_KEY in Streamlit secrets or .env file.")
+
+        # If Tavily was not used or yielded no results, fallback to DuckDuckGo search
+        if not all_results:
+            try:
+                from duckduckgo_search import DDGS
+                with DDGS() as ddgs:
+                    for query in sub_queries:
+                        results = list(ddgs.text(query, max_results=MAX_SEARCH_RESULTS))
+                        for r in results:
+                            all_results.append(f"[Source: {r.get('href', 'N/A')}]\nTitle: {r.get('title', '')}\n{r.get('body', '')}")
+            except Exception as ddg_err:
+                if not tavily_key:
+                    all_results.append("[Notice] Tavily API Key not found. Please set TAVILY_API_KEY in .env file or Streamlit secrets.")
     except Exception as e:
         all_results.append(f"[Search Error] {str(e)}")
 

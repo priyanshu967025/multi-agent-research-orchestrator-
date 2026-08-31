@@ -1,0 +1,18 @@
+# Minimal Dark theme adapted from Streamlit's bundled theme templates.
+[theme]
+base = "dark"
+primaryColor = "#6366f1"
+backgroundColor = "#18181b"
+secondaryBackgroundColor = "#27272a"
+textColor = "#fafafa"
+linkColor = "#818cf8"
+borderColor = "#3f3f46"
+showWidgetBorder = false
+showSidebarBorder = false
+baseRadius = "6px"
+buttonRadius = "6px"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+
+[theme.sidebar]
+backgroundColor = "#09090b"
+secondaryBackgroundColor = "#18181b"

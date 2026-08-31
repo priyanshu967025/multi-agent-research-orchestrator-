@@ -1,0 +1,321 @@
+\newpage
+
+% ######################################################################
+% PART XII: PYTHON DEEP DIVE
+% ######################################################################
+\part{Python Deep Dive --- Project Ke Code Se Seekho}
+
+\begin{storybox}
+Is project ka saara code Python hai --- aur isme modern Python features kaafi use hue hain. Ye section har feature ko \textbf{project ke asli code se} samjhata hai --- interview mein ``Python deep knowledge'' ka proof.
+\end{storybox}
+
+% ######################################################################
+% SECTION 50: PYTHON FEATURES IN THE PROJECT
+% ######################################################################
+\section{Python Features --- Project Ke Code Se}
+
+\subsection{TypedDict --- Dictionary Ka Type Contract}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={state/schema.py se}]
+from typing import TypedDict, Annotated
+
+class ResearchState(TypedDict):
+    topic: str
+    research_data: list[str]
+    analysis: str
+    fact_check_result: str
+    fact_check_passed: bool
+    revision_count: int
+    final_report: str
+    messages: Annotated[list, add_messages]
+    rag_context: list[str]
+    current_agent: str
+\end{lstlisting}
+
+\textbf{Kya hai:} TypedDict runtime par sirf ek normal dict hai --- par \textbf{type checker} (mypy/pyright) ko batata hai ki kis key par kaunsa type hoga. Isse: (1) autocomplete milta hai; (2) typo keys compile-time pakda jaata hai; (3) pipeline ka contract document hota hai.
+
+\textbf{Interview line:} ``TypedDict se state schema \textbf{self-documenting} hai --- naya developer dekh ke samajh jata hai ki graph kya data carry karta hai.''
+\end{codestorybox}
+
+\subsection{Annotated + Reducer --- LangGraph Ka Contract}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle]
+from typing import Annotated
+from langgraph.graph.message import add_messages
+
+messages: Annotated[list, add_messages]
+\end{lstlisting}
+
+\textbf{Annotated kya hai:} Type + metadata ko combine karta hai. Type: \texttt{list}; metadata: \texttt{add\_messages} (ek function). LangGraph is metadata ko padh kar decide karta hai ki is field ko kaise merge karna hai.
+
+\textbf{Why useful:} Normal typing type checker ko sirf type batata hai; \texttt{Annotated} \textbf{behaviour} bhi batata hai. Ye ``metadata-driven design'' ka example hai --- framework configuration type system mein hi rehta hai.
+\end{codestorybox}
+
+\subsection{Generators --- stream() Ke Peeche}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={Generator concept}]
+def countdown(n):
+    while n > 0:
+        yield n          # pause here, value do, phir resume
+        n -= 1
+
+for x in countdown(3):   # 3, 2, 1
+    print(x)
+\end{lstlisting}
+
+\textbf{Project mein:} \texttt{research\_graph.stream(state)} ek generator return karta hai --- har node ke baad event yield hota hai. Streamlit har event par UI update karta hai. Agar poora result ek saath aata (invoke), to real-time progress dikhana possible nahi hota.
+\end{codestorybox}
+
+\subsection{Context Managers --- with Statement}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={with pattern}]
+# Django test client ke andar
+with patch("graph.workflow.research_graph") as mock_graph:
+    mock_graph.invoke.return_value = {"final_report": "..."}
+    resp = client.post("/api/research/execute/", ...)
+\end{lstlisting}
+
+\textbf{Kya hai:} \texttt{with} block enter/exit lifecycle control karta hai --- setup/teardown guarantee. \texttt{unittest.mock.patch} isi se kaam karta hai: enter par mock install, exit par restore. Django test client bhi transaction lifecycle manage karta hai.
+\end{codestorybox}
+
+\subsection{Exception Handling --- Graceful Degradation}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={agents/researcher.py se}]
+try:
+    if groq_key:
+        llm = get_llm()
+        query_response = llm.invoke([...])
+        lines = [l.strip() for l in ... if l.strip()]
+        if lines:
+            sub_queries = lines[:3]
+except Exception as e:
+    sub_queries = [topic, f"{topic} latest research", f"{topic} analysis"]
+\end{lstlisting}
+
+\textbf{Pattern:} \texttt{try} $\rightarrow$ best path; \texttt{except} $\rightarrow$ \textbf{graceful fallback} (default values). Ye har external call ke saath repeat hota hai. Interview point: ``Broad \texttt{except Exception} intentional hai --- main fail-graceful chahata hoon, fail-fast nahi. Production mein specific exceptions + logging add karunga.''
+\end{codestorybox}
+
+\subsection{Dictionary Operations --- Python Ka Dil}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={Dict patterns used}]
+state.get("revision_count", 0)      # safe access with default
+state.get("fact_check_result")      # None if missing
+"VERDICT: NEEDS_REVISION" in result.upper()   # substring check
+{"chunks_added": n, "files_processed": p}     # dict literal return
+f"Topic: {topic}\n\n" + "\n".join(...)        # f-string + join
+\end{lstlisting}
+
+\textbf{Interview line:} ``\texttt{state.get(key, default)} se missing keys crash nahi karti --- optional fields safe. Isliye \texttt{revision\_count} pehli baar 0 default leta hai.''
+\end{codestorybox}
+
+\subsection{List Slicing --- Context Window Control}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle]
+research_data[:10]     # analyst: top 10 sources
+research_data[:8]      # writer: top 8 sources
+rag_context[:5]        # top 5 rag chunks
+lines[:3]              # exactly 3 queries
+\end{lstlisting}
+
+\textbf{Interview line:} ``Slicing se context window discipline milta hai --- har agent ko fixed-size input. Ye token cost + focus control karta hai. Isliye hi har agent ki 'context diet' alag hai.''
+\end{codestorybox}
+
+% ######################################################################
+% SECTION 51: FULL CODE WALKTHROUGHS
+% ######################################################################
+\section{Full Code Walkthroughs --- Jo Pehle Nahi Dekha}
+
+\subsection{benchmark/evaluator.py --- Line-by-Line}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={evaluator.py --- poora flow}]
+def run_single_agent_baseline(topic: str) -> str:
+    # 1 LLM call: writer prompt seedha, bina research ke
+    llm = get_llm()
+    resp = llm.invoke([
+        SystemMessage(content=WRITER_PROMPT),
+        HumanMessage(content=f"Topic: {topic}"),
+    ])
+    return resp.content
+
+def evaluate_outputs(topic, report_a, report_b) -> dict:
+    # Step 1: LLM judge try karo
+    try:
+        scores = llm_judge(topic, report_a, report_b)
+        if scores:
+            return scores
+    except Exception:
+        pass
+    # Step 2: fallback --- heuristics (hamesha kaam karta hai)
+    return heuristic_scores(report_a, report_b)
+
+def heuristic_scores(report_a, report_b) -> dict:
+    # depth: section count + list/bullet count + word count
+    # verifiability: citation count + URL mentions
+    ...
+\end{lstlisting}
+
+\textbf{Design decisions:}
+\begin{itemize}
+\item \textbf{LLM judge first, heuristics fallback} --- quality jab ho, reliability hamesha.
+\item \textbf{Heuristics deterministic} --- tests mein predictable.
+\item \textbf{Both reports same judge, same call} --- relative scoring, bias kam.
+\end{itemize}
+\end{codestorybox}
+
+\subsection{pages/1\_Benchmark.py --- Charts Ka Logic}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={Benchmark page API client}]
+def _get_api_url() -> str:
+    url = os.getenv("BACKEND_API_URL", "")
+    if not url:
+        try:
+            url = str(st.secrets.get("BACKEND_API_URL", ""))
+        except Exception:
+            pass
+    return url.rstrip("/") or "http://localhost:8000/api"
+
+def load_history() -> list[dict]:
+    r = requests.get(HISTORY_URL, timeout=15)
+    r.raise_for_status()
+    return r.json()
+
+def history_frame(records: list[dict]) -> pd.DataFrame:
+    rows = [{...} for item in records]
+    df = pd.DataFrame(rows)
+    if not df.empty:
+        df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
+        df = df.sort_values("created_at")
+    return df
+\end{lstlisting}
+
+\textbf{Design:} (1) Configurable API URL (env $\rightarrow$ secrets $\rightarrow$ default); (2) \texttt{r.raise\_for\_status()} fail-fast client side; (3) pandas DataFrame --- \texttt{st.line\_chart} seedha consume karta hai.
+\end{codestorybox}
+
+\subsection{backend/api/views.py --- Execute Research View}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={ExecuteResearchAPIView}]
+class ExecuteResearchAPIView(APIView):
+    def post(self, request):
+        topic = request.data.get("topic", "").strip()
+        if not topic:
+            return Response({"error": "Topic is required"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            state = initial_state(topic)
+            final = research_graph.invoke(state)
+            session = ResearchSession.objects.create(
+                topic=topic,
+                report=final["final_report"],
+                messages=final.get("messages", []),
+                user=request.user if request.user.is_authenticated else None,
+            )
+            return Response(ResearchSessionSerializer(session).data,
+                            status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+\end{lstlisting}
+
+\textbf{Flow:} Validate $\rightarrow$ invoke pipeline $\rightarrow$ persist $\rightarrow$ serialize. \textbf{Transaction note:} Agar invoke fail hota hai, \texttt{create} kabhi nahi hota --- half-saved session impossible. Anonymous user $\rightarrow$ \texttt{user=None}.
+\end{codestorybox}
+
+\subsection{mcp\_server.py --- Tools Deep Dive}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=pythonstyle, caption={MCP tool pattern}]
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("Research Orchestrator",
+              instructions="Research + knowledge base tools")
+
+@mcp.tool()
+def research_topic(topic: str) -> dict:
+    """Research karo aur report do."""
+    state = initial_state(topic)
+    final = research_graph.invoke(state)
+    return {"report": final["final_report"], "messages": final.get("messages")}
+
+@mcp.tool()
+def ingest_document(file_path: str) -> dict:
+    """PDF ko knowledge base mein daalo."""
+    return ingest_documents([file_path])
+
+@mcp.tool()
+def search_knowledge_base(query: str, k: int = 5) -> list[str]:
+    """Knowledge base search karo."""
+    return retrieve_context(query, k=k)
+
+@mcp.tool()
+def get_kb_stats() -> dict:
+    return get_collection_stats()
+
+@mcp.tool()
+def clear_knowledge_base(collection: str = "research_docs") -> dict:
+    clear_collection(collection)
+    return {"cleared": collection}
+
+@mcp.resource("info://orchestrator")
+def info() -> str:
+    """Project info resource."""
+    return "Multi-agent research orchestrator..."
+\end{lstlisting}
+
+\textbf{Interview points:} (1) \texttt{@mcp.tool()} decorator --- function signature se tool schema auto-generate; (2) Type hints se input validation; (3) docstring = tool description (LLM ko batata hai kab call karna hai); (4) \textbf{fix}: fastmcp 3.x mein \texttt{description=} $\rightarrow$ \texttt{instructions=}.
+\end{codestorybox}
+
+% ######################################################################
+% SECTION 52: PYTHON INTERVIEW QUESTIONS
+% ######################################################################
+\section{Python Interview Questions --- Project-Based}
+
+\begin{interviewbox}
+\textbf{Q69: ``Mutable vs immutable Python mein?''}
+
+\textbf{Answer:} Mutable (changeable): list, dict, set. Immutable: tuple, str, int, frozenset. Is project mein: state dict mutable hai (LangGraph update karta hai); \texttt{research\_data} list append hota hai; TypedDict dict hai --- isliye shallow copy semantics careful. Interviewer ko id/equality ka difference bhi batao.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q70: ``Shallow vs deep copy?''}
+
+\textbf{Answer:} Shallow copy: top-level copy, nested objects \textbf{shared}. Deep copy: sab kuch naya. Is project mein state update karte waqt \textbf{shallow merge} hota hai (LangGraph default) --- nested fields replace hote hain. Isliye har node apne top-level keys hi return karta hai --- shared nested mutation se bachta hai.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q71: ``GIL kya hai? Python multi-threading?''}
+
+\textbf{Answer:} GIL (Global Interpreter Lock): ek time par ek thread hi Python bytecode chala sakta hai --- CPU-bound threading limited. I/O-bound (network calls) threading se acha scale hota hai kyunki lock I/O wait par release hota hai. Is project mein: Tavily/LLM calls I/O-bound hain --- 3 sub-queries parallel ThreadPool se 3x fast ho sakte hain. CPU-bound (embeddings) ke liye multiprocessing.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q72: ``Decorator kya hai? Project mein kahan use hua?''}
+
+\textbf{Answer:} Decorator = function ko modify karne wala wrapper. Is project mein: \texttt{@mcp.tool()} --- function ko MCP tool schema mein convert; Django \texttt{@api\_view}; pytest fixtures (decorator-like). Custom decorator example: \texttt{@timer} jo function latency log kare --- production observability ke liye.
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q73: ``Generator vs list? Kab kya?''}
+
+\textbf{Answer:} Generator: lazy --- ek-ek value, memory efficient, ek baar iterate. List: eager --- saari values memory mein, multiple iteration. Is project mein: \texttt{graph.stream()} generator hai --- 176s ke run mein har event real-time process hota hai, sab kuch memory mein nahi. Report (final result) list/str hai --- multiple baar access chahiye (render, download, store).
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q74: ``\*args and \*\*kwargs?''}
+
+\textbf{Answer:} \*args: positional args ka tuple. \*\*kwargs: keyword args ka dict. Is project mein: \texttt{tool\_type} patterns, fixture helpers, aur function wrappers mein. Django/DRF bhi internally kwargs use karta hai (request context).
+\end{interviewbox}
+
+\begin{interviewbox}
+\textbf{Q75: ``Type hints kyun? Runtime mein kya hota hai?''}
+
+\textbf{Answer:} Type hints runtime par \textbf{ignore} hote hain (Python duck-typed) --- sirf documentation + type checker ke liye. Is project mein TypedDict/Annotated type checkers ko contract batate hain --- bugs development mein hi pakde jaate hain, production mein nahi. Optional: pydantic runtime validation ke liye (production upgrade).
+\end{interviewbox}

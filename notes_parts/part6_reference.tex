@@ -1,0 +1,296 @@
+\newpage
+
+% ######################################################################
+% PART VI: REFERENCE
+% ######################################################################
+\part{Reference --- API, Testing, Deployment}
+
+% ######################################################################
+% SECTION 29: API REFERENCE
+% ######################################################################
+\section{Django REST API Reference --- Har Endpoint Ka Pura Detail}
+
+\subsection{Endpoint Map}
+
+\begin{longtable}{p{1.6cm} p{4.2cm} p{7.8cm}}
+\toprule
+\textbf{Method} & \textbf{Endpoint} & \textbf{Kaam} \\
+\midrule
+GET & /api/health/ & Server + pipeline readiness check \\
+POST & /api/auth/register/ & Naya user + token \\
+POST & /api/auth/login/ & Existing user se token \\
+POST & /api/research/execute/ & Full research pipeline chalao \\
+POST & /api/research/benchmark/ & Single vs multi-agent benchmark \\
+GET & /api/benchmark/history/ & Past benchmark evaluations (limit param) \\
+\bottomrule
+\end{longtable}
+
+\subsection{GET /api/health/}
+
+\begin{codestorybox}
+\textbf{Request:} No body. \textbf{Response 200:}
+\begin{lstlisting}[style=jsonstyle]
+{
+  "status": "ok",
+  "pipeline": "ready",
+  "model": "openai/gpt-oss-120b"
+}
+\end{lstlisting}
+
+\textbf{Kya karta hai:} Django server + pipeline imports check karta hai. Streamlit app isi se backend reachability decide karta hai (Benchmark Lab ka ``Backend API reachable'' banner).
+\end{codestorybox}
+
+\subsection{POST /api/auth/register/}
+
+\begin{codestorybox}
+\textbf{Request body:}
+\begin{lstlisting}[style=jsonstyle]
+{"username": "rahul", "password": "secret123"}
+\end{lstlisting}
+
+\textbf{Response 201:}
+\begin{lstlisting}[style=jsonstyle]
+{"id": 1, "username": "rahul", "token": "abc123..."}
+\end{lstlisting}
+
+\textbf{Failures:}
+\begin{itemize}
+\item 400 --- missing fields ya duplicate username (serializer validation).
+\item Password hashed hota hai (\texttt{set\_password}) --- plain text kabhi store nahi hota.
+\end{itemize}
+\end{codestorybox}
+
+\subsection{POST /api/auth/login/}
+
+\begin{codestorybox}
+\textbf{Request body:}
+\begin{lstlisting}[style=jsonstyle]
+{"username": "rahul", "password": "secret123"}
+\end{lstlisting}
+
+\textbf{Response 200:}
+\begin{lstlisting}[style=jsonstyle]
+{"token": "abc123...", "username": "rahul"}
+\end{lstlisting}
+
+\textbf{Failures:} 401 --- galat password ya user exist nahi karta (\texttt{authenticate} check). Response mein 401 deliberately generic hai --- user enumeration prevent karta hai.
+\end{codestorybox}
+
+\subsection{POST /api/research/execute/}
+
+\begin{codestorybox}
+\textbf{Request body:}
+\begin{lstlisting}[style=jsonstyle]
+{"topic": "solid state battery market outlook 2026"}
+\end{lstlisting}
+
+\textbf{Response 200 (pipeline ke baad):}
+\begin{lstlisting}[style=jsonstyle]
+{
+  "id": 1,
+  "topic": "solid state battery market outlook 2026",
+  "report": "# Research Report: ... (full markdown)",
+  "messages": ["\U0001f50d Researcher found 15 web results...",
+               "\U0001f4ca Analyst processed 15 results.",
+               "\u2705 Fact-check PASSED (revision 0/3)",
+               "\u270d\ufe0f Report complete"],
+  "sources_count": 15,
+  "revision_count": 0,
+  "created_at": "2026-08-17T12:00:00Z"
+}
+\end{lstlisting}
+
+\textbf{Validation:} Missing topic $\rightarrow$ 400. \textbf{Error path:} Pipeline exception $\rightarrow$ 500, \textbf{no row persisted} (transaction rollback) --- half-saved sessions nahi.
+\end{codestorybox}
+
+\subsection{POST /api/research/benchmark/}
+
+\begin{codestorybox}
+\textbf{Request body:}
+\begin{lstlisting}[style=jsonstyle]
+{"topic": "Best practices for RAG in 2026"}
+\end{lstlisting}
+
+\textbf{Response 200:}
+\begin{lstlisting}[style=jsonstyle]
+{
+  "id": 1,
+  "topic": "Best practices for RAG in 2026",
+  "single_agent_report": "...",
+  "multi_agent_report": "...",
+  "single_agent_depth": 9,
+  "multi_agent_depth": 8,
+  "single_agent_verifiability": 8,
+  "multi_agent_verifiability": 7,
+  "verdict": "SINGLE_AGENT_SUPERIOR",
+  "created_at": "2026-08-17T12:00:00Z"
+}
+\end{lstlisting}
+
+\textbf{Verdict logic:} Multi-agent depth+verifiability sum > single-agent sum $\rightarrow$ MULTI\_AGENT\_SUPERIOR; close margin $\rightarrow$ TIE; warna SINGLE\_AGENT\_SUPERIOR.
+\end{codestorybox}
+
+\subsection{GET /api/benchmark/history/}
+
+\begin{codestorybox}
+\textbf{Query params:} \texttt{?limit=10} (default 20, max 500).
+
+\textbf{Response 200:}
+\begin{lstlisting}[style=jsonstyle]
+[
+  {"id": 1, "topic": "...", "single_agent_depth": 9, "...": "..."},
+  {"id": 2, "...": "..."}
+]
+\end{lstlisting}
+
+\textbf{Ordering:} Newest first (\texttt{-created\_at, -id} tiebreak --- same-timestamp rows deterministic). Empty history $\rightarrow$ \texttt{[]}. Benchmark Lab page isi se charts banata hai.
+\end{codestorybox}
+
+\begin{warningbox}
+\textbf{Interview note on API design:} (1) Nested resources (\texttt{/api/research/...}) logical grouping ke liye; (2) \texttt{/api/benchmark/history/} alag endpoint isliye kyunki history \textbf{read-only collection} hai --- benchmark POST se alag concern; (3) Response fields consistent snake\_case; (4) Errors: proper status codes (400/401/500) + DRF default error body. Ye REST best practices ke examples hain.
+\end{warningbox}
+
+% ######################################################################
+% SECTION 30: TESTING DEEP DIVE
+% ######################################################################
+\section{Testing Deep Dive --- 16 Tests Ka Khoj}
+
+\subsection{Test Infrastructure}
+
+\begin{codestorybox}
+\textbf{pytest.ini:}
+\begin{lstlisting}[style=bashstyle]
+[pytest]
+DJANGO_SETTINGS_MODULE = orchestrator_backend.settings
+pythonpath = backend
+testpaths = backend
+\end{lstlisting}
+
+\textbf{Kya karta hai:} (1) Django settings point karta hai; (2) \texttt{backend/} ko sys.path mein daalta hai taaki \texttt{from api.models import ...} chale; (3) sirf \texttt{backend/} mein tests dhoondta hai.
+\end{codestorybox}
+
+\subsection{Mocking Strategy --- Real Calls Kabhi Nahin}
+
+\begin{conceptbox}
+\textbf{Kyun mock?} Real Tavily/Groq/ChromaDB calls tests ko: slow (seconds-minutes), paid (API credits), non-deterministic (LLM output varies), aur flaky (network) banate hain. Mock se: fast (\textasciitilde9s), free, deterministic, reliable.
+
+\textbf{Kaise mock kiya:}
+\begin{itemize}
+\item \texttt{mock\_research\_graph} fixture: \texttt{graph.workflow.research\_graph} ko ek stub object se replace --- \texttt{invoke()} canned state return karta hai.
+\item \texttt{exploding\_research\_graph}: exception raise karta hai --- 500 error paths test karne ke liye.
+\item \texttt{mock\_benchmark}: \texttt{run\_single\_agent\_baseline} + \texttt{evaluate\_outputs} ko stub.
+\end{itemize}
+\end{conceptbox}
+
+\subsection{Test Case Analysis}
+
+\begin{longtable}{p{2.2cm} p{5.6cm} p{5.8cm}}
+\toprule
+\textbf{File} & \textbf{Kya test karta hai} & \textbf{Key assertion} \\
+\midrule
+test\_auth.py (6) & register success/fail, login success/fail & 201+token, 400 dup, 401 wrong pass \\
+test\_research.py (4) & execute validation/success/error & 400 no topic, session persisted, 500 no row \\
+test\_benchmark.py (6) & benchmark + history + limit & scores persisted, newest first, empty list \\
+\bottomrule
+\end{longtable}
+
+\begin{interviewbox}
+\textbf{Interesting bug jo tests se mila:} History ordering test mein do rows ek hi microsecond mein bane (Django test env time freeze karta hai) --- \texttt{created\_at} tie ho gaya aur ordering nondeterministic. Fix: order by \texttt{-created\_at, -id}. Ye asli robustness win tha --- sirf test ke liye nahi, production ordering ke liye bhi.
+\end{interviewbox}
+
+\subsection{How To Run}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=bashstyle]
+# from project root (venv active)
+pytest            # full suite, ~9 seconds
+
+# specific file
+pytest backend/api/tests/test_auth.py
+
+# specific test with output
+pytest -v backend/api/tests/test_benchmark.py
+\end{lstlisting}
+
+\textbf{Interview point:} Test suite \textbf{fast} hone se developers baar baar chalate hain --- 9s suite = daily use. Slow suite (minutes) = kabhi nahi chalta.
+\end{codestorybox}
+
+% ######################################################################
+% SECTION 31: DEPLOYMENT
+% ######################################################################
+\section{Deployment --- Demo Se Production Tak}
+
+\subsection{Local Setup (Interview Demo)}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=bashstyle]
+# 1. Environment
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# 2. Keys (.env ya Streamlit secrets)
+GROQ_API_KEY=...
+TAVILY_API_KEY=...
+
+# 3. Django backend (port 8001)
+cd backend
+python manage.py migrate
+python manage.py runserver 8001
+
+# 4. Streamlit UI (alag terminal, port 8501)
+streamlit run app.py
+
+# 5. MCP server (Claude Desktop ke liye)
+python mcp_server.py
+\end{lstlisting}
+
+\textbf{Environment separation:} Streamlit secrets (cloud) vs .env (local) --- config/setting.py dono try karta hai.
+\end{codestorybox}
+
+\subsection{Streamlit Cloud}
+
+\begin{conceptbox}
+\textbf{Steps:} (1) Repo GitHub par push; (2) Streamlit Cloud $\rightarrow$ New app $\rightarrow$ repo select; (3) \textbf{Secrets} mein \texttt{GROQ\_API\_KEY}, \texttt{TAVILY\_API\_KEY} daalo; (4) Deploy. \textbf{Caveat:} Streamlit Cloud ephemeral storage hai --- ChromaDB aur SQLite har session par reset ho sakte hain. Production: managed vector DB + PostgreSQL.
+\end{conceptbox}
+
+\subsection{Django Production}
+
+\begin{conceptbox}
+\textbf{Production checklist:} (1) \texttt{DEBUG=False}; (2) PostgreSQL; (3) Gunicorn/uvicorn + Nginx reverse proxy; (4) HTTPS (Let's Encrypt); (5) \texttt{ALLOWED\_HOSTS}; (6) CORS allowlist; (7) Rate limiting; (8) Secrets via env, kabhi code mein nahi.
+\end{conceptbox}
+
+\subsection{MCP Server for Claude Desktop}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=jsonstyle]
+// claude_desktop_config.json
+{
+  "mcpServers": {
+    "research-orchestrator": {
+      "command": "python",
+      "args": ["D:/path/to/mcp_server.py"]
+    }
+  }
+}
+\end{lstlisting}
+
+\textbf{Fix yaad rakho:} fastmcp 3.x mein \texttt{FastMCP(description=...)} rename hua \texttt{instructions=...} --- version mismatch par ye error aata hai. (Maine is project mein ye fix kiya.)
+\end{codestorybox}
+
+\subsection{Docker (Optional)}
+
+\begin{codestorybox}
+\begin{lstlisting}[style=bashstyle]
+# Dockerfile (streamlit service)
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+EXPOSE 8501
+CMD ["streamlit", "run", "app.py"]
+\end{lstlisting}
+
+Compose mein 3 services: \texttt{streamlit} (8501), \texttt{backend} (8001), \texttt{chromadb}. Volumes: ChromaDB persist directory + SQLite.
+\end{codestorybox}

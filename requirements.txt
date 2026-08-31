@@ -3,7 +3,12 @@ langchain
 langchain-core
 langchain-community
 langchain-groq
+langchain-google-genai
+langchain-openai
+langchain-anthropic
+langchain-ollama
 tavily-python
+duckduckgo-search
 langchain-huggingface
 langchain-chroma
 langchain-text-splitters
@@ -13,3 +18,15 @@ pypdf
 sentence-transformers
 streamlit
 fastmcp
+requests
+pandas
+
+django
+djangorestframework
+django-cors-headers
+gunicorn
+whitenoise
+
+# Development / Testing
+pytest
+pytest-django

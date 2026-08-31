@@ -15,7 +15,36 @@ __pycache__/
 
 # Local Vector Database & Storage
 chroma_db/
+rag/chroma_db/
+backend/chroma_db/
+
+# Frontend Build & Dependencies
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# PDF files ignore (except placement notes)
 *.pdf
+!Multi_Agent_Master_Notes.pdf
+!Multi_Agent_Research_Orchestrator_Notes.pdf
+!Multi_Agent_Short_Revision_Notes.pdf
+
+# Django Local Database & Static Collection
+*.sqlite3
+backend/staticfiles/
+staticfiles/
+
+# Freebuff tool state
+.freebuff/
+
+# Streamlit local credentials
+.streamlit/secrets.toml
+
+# LaTeX build artifacts
+*.aux
+*.out
+*.toc
+*.log
 
 # IDE & OS Settings
 .vscode/
