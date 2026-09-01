@@ -78,6 +78,8 @@ export default function LLMMCPHubView({ providerInfo, onRefresh }) {
         res = await api.getPlatformStats();
       } else if (selectedEndpoint === '/rag/stats/') {
         res = await api.getRAGStats();
+      } else if (selectedEndpoint === '/research/jobs/') {
+        res = await api.listJobs(1, 5);
       }
       setApiResponse(res);
     } catch (err) {
@@ -91,53 +93,14 @@ export default function LLMMCPHubView({ providerInfo, onRefresh }) {
     setMcpExecuting(true);
     setMcpToolOutput(null);
 
-    await new Promise((r) => setTimeout(r, 600));
-
-    if (selectedMcpTool === 'research_topic') {
-      setMcpToolOutput({
-        tool: 'research_topic',
-        status: 'success',
-        result: {
-          session_id: 'mcp-sess-' + Date.now().toString(36),
-          topic: mcpInputTopic,
-          pipeline_nodes_executed: ['supervisor', 'researcher', 'analyst', 'fact_checker', 'writer'],
-          claims_verified: 5,
-          hallucination_score: 0.0,
-          report_snippet: `# Multi-Agent Research Synthesis\n\n**Topic:** ${mcpInputTopic}\n\nMulti-agent coordination enables parallel inquiry decomposition and rigorous claim cross-examination with ChromaDB vector memory.`,
-          execution_time_sec: 2.84
-        }
-      });
-    } else if (selectedMcpTool === 'list_research_sessions') {
-      setMcpToolOutput({
-        tool: 'list_research_sessions',
-        status: 'success',
-        total_sessions: 2,
-        sessions: [
-          { id: 'sess-001', topic: 'RAG Hallucination Mitigation', status: 'completed', date: '2026-09-01' },
-          { id: 'sess-002', topic: 'Post-Quantum Cryptography', status: 'completed', date: '2026-08-31' }
-        ]
-      });
-    } else if (selectedMcpTool === 'query_research_rag') {
-      setMcpToolOutput({
-        tool: 'query_research_rag',
-        status: 'success',
-        query: mcpInputTopic,
-        matches: [
-          { document: 'LangGraph Multi-Agent Architecture Guide', similarity: 0.96, collection: 'research_docs' },
-          { document: 'ChromaDB Hybrid Search Embeddings', similarity: 0.91, collection: 'past_research' }
-        ]
-      });
-    } else if (selectedMcpTool === 'export_session_report') {
-      setMcpToolOutput({
-        tool: 'export_session_report',
-        status: 'success',
-        format: 'markdown',
-        download_ready: true,
-        content_type: 'text/markdown; charset=utf-8'
-      });
+    try {
+      const output = await api.executeMcpTool(selectedMcpTool, mcpInputTopic);
+      setMcpToolOutput(output);
+    } catch (err) {
+      setMcpToolOutput({ tool: selectedMcpTool, status: 'error', error: err.message });
+    } finally {
+      setMcpExecuting(false);
     }
-
-    setMcpExecuting(false);
   };
 
   const providers = [

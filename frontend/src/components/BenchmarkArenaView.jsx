@@ -22,6 +22,8 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [activeTab, setActiveTab] = useState('multi'); // 'multi' | 'single'
 
+  const [evalStep, setEvalStep] = useState('');
+
   const sampleTopics = [
     'How do Multi-Agent architectures prevent hallucinations in RAG systems?',
     'Current state of CRISPR gene editing therapies approved by the FDA',
@@ -51,6 +53,15 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
 
     setRunning(true);
     setResult(null);
+    setEvalStep('1. Formulating baseline prompt & querying single-agent baseline...');
+
+    const timer1 = setTimeout(() => {
+      setEvalStep('2. Coordinating 4-agent LangGraph workflow (Researcher → Analyst → Fact-Checker → Writer)...');
+    }, 1200);
+
+    const timer2 = setTimeout(() => {
+      setEvalStep('3. Cross-verifying citations & computing empirical depth & verifiability metrics...');
+    }, 2800);
 
     try {
       const data = await api.runBenchmark(queryTopic);
@@ -59,7 +70,10 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
     } catch (err) {
       console.error('Benchmark error:', err);
     } finally {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
       setRunning(false);
+      setEvalStep('');
     }
   };
 
@@ -139,6 +153,25 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
               </button>
             ))}
           </div>
+
+          {running && evalStep && (
+            <div style={{
+              marginTop: '1rem',
+              padding: '0.75rem 1rem',
+              background: 'rgba(99, 102, 241, 0.12)',
+              border: '1px solid rgba(99, 102, 241, 0.35)',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              color: '#818cf8',
+              fontSize: '0.82rem',
+              fontWeight: 500
+            }}>
+              <RefreshCw size={15} className="spinning-icon" />
+              <span>{evalStep}</span>
+            </div>
+          )}
         </form>
       </div>
 

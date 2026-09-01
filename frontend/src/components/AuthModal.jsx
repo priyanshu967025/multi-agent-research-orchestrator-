@@ -283,6 +283,22 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             )}
           </button>
         </form>
+
+        <div style={{
+          marginTop: '1.25rem',
+          padding: '0.65rem 0.85rem',
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-sm)',
+          fontSize: '0.74rem',
+          color: 'var(--text-dim)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+          justifyContent: 'center'
+        }}>
+          <span>💡 Quick Demo: Username: <strong style={{ color: '#ffffff' }}>demo</strong> · Password: <strong style={{ color: '#ffffff' }}>demo1234</strong></span>
+        </div>
       </div>
     </div>
   );
