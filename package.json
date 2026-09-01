@@ -1,12 +1,9 @@
 {
   "name": "multi-agent-research-orchestrator",
-  "version": "1.0.0",
+  "version": "2.5.0",
   "private": true,
-  "workspaces": [
-    "frontend"
-  ],
   "scripts": {
-    "build": "npm run build --workspace=frontend",
-    "dev": "npm run dev --workspace=frontend"
+    "build": "cd frontend && npm install && npm run build",
+    "dev": "cd frontend && npm run dev"
   }
 }
