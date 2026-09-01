@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, LogIn, UserPlus, AlertCircle, Bot } from 'lucide-react';
+import { X, LogIn, UserPlus, AlertCircle, Bot, Zap, ShieldCheck } from 'lucide-react';
 import { api } from '../api';
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
@@ -12,6 +12,20 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
 
   if (!isOpen) return null;
 
+  const handleDemoLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const data = await api.login('Demo Researcher', 'demo1234');
+      onAuthSuccess(data.user);
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Demo sign-in failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -20,9 +34,9 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     try {
       let data;
       if (tab === 'login') {
-        data = await api.login(username, password);
+        data = await api.login(username.trim(), password);
       } else {
-        data = await api.register(username, email, password);
+        data = await api.register(username.trim(), email.trim(), password);
       }
       onAuthSuccess(data.user);
       onClose();
@@ -74,7 +88,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
         </button>
 
         {/* Modal Header */}
-        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
           <div style={{
             width: '44px',
             height: '44px',
@@ -92,8 +106,51 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             {tab === 'login' ? 'Welcome Back' : 'Create Account'}
           </h2>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-            Access persistent research workspaces & library
+            Access research pipelines, ChromaDB RAG, and Benchmark Arena
           </p>
+        </div>
+
+        {/* Instant Demo Access Button */}
+        <button
+          type="button"
+          onClick={handleDemoLogin}
+          disabled={loading}
+          style={{
+            width: '100%',
+            padding: '0.75rem 1rem',
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(52, 211, 153, 0.25))',
+            border: '1px solid rgba(99, 102, 241, 0.5)',
+            borderRadius: 'var(--radius-md)',
+            color: '#ffffff',
+            fontWeight: 700,
+            fontSize: '0.86rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            cursor: 'pointer',
+            marginBottom: '1.25rem',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 0 12px rgba(99, 102, 241, 0.2)'
+          }}
+        >
+          <Zap size={16} color="#34d399" />
+          <span>⚡ Instant Recruiter / Demo Access</span>
+        </button>
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          margin: '0.75rem 0',
+          color: 'var(--text-dim)',
+          fontSize: '0.72rem',
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em'
+        }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+          <span>or sign in with credentials</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
         </div>
 
         {/* Tabs */}
@@ -105,6 +162,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
           marginBottom: '1.25rem',
         }}>
           <button
+            type="button"
             onClick={() => { setTab('login'); setError(''); }}
             style={{
               flex: 1,
@@ -122,6 +180,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             Sign In
           </button>
           <button
+            type="button"
             onClick={() => { setTab('register'); setError(''); }}
             style={{
               flex: 1,
@@ -168,7 +227,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. researcher_alex"
+              placeholder="e.g. admin or researcher"
               className="input-control"
               style={{ fontSize: '0.88rem' }}
             />
