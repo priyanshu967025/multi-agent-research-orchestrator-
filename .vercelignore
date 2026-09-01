@@ -1,0 +1,9 @@
+backend/
+.venv/
+chroma_db/
+*.tex
+*.pdf
+*.aux
+*.log
+*.out
+*.toc
