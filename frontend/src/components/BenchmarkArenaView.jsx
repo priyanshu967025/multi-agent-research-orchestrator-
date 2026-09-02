@@ -14,6 +14,27 @@ import {
 import { marked } from 'marked';
 import { api } from '../api';
 
+// Safe markdown parser — never throws on null/undefined/malformed input
+function safeParse(text) {
+  try {
+    if (!text || typeof text !== 'string') return '<em style="color:var(--text-dim)">No content available.</em>';
+    return marked.parse(text);
+  } catch {
+    return `<pre style="white-space:pre-wrap;color:var(--text-muted)">${String(text)}</pre>`;
+  }
+}
+
+// Safe date formatter
+function safeDate(val) {
+  try {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString();
+  } catch {
+    return '—';
+  }
+}
+
 export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAuth }) {
   const [topic, setTopic] = useState('');
   const [running, setRunning] = useState(false);
@@ -324,7 +345,7 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
               <div 
                 className="markdown-body"
                 dangerouslySetInnerHTML={{ 
-                  __html: marked.parse(activeTab === 'multi' ? (result.multi_agent_report || '') : (result.single_agent_baseline?.text || '')) 
+                  __html: safeParse(activeTab === 'multi' ? result.multi_agent_report : result.single_agent_baseline?.text)
                 }}
               />
             </div>
@@ -381,7 +402,7 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
                       </span>
                     </td>
                     <td style={{ padding: '0.65rem 0.85rem', color: 'var(--text-dim)', fontSize: '0.78rem' }}>
-                      {new Date(h.created_at).toLocaleDateString()}
+                      {safeDate(h.created_at)}
                     </td>
                   </tr>
                 ))}
