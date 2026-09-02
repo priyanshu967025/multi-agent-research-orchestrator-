@@ -1,28 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
-import { Layers, Cpu, Activity, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Layers, Cpu, Activity, Sparkles, Orbit, ShieldCheck, Zap, Database } from 'lucide-react';
 
 export default function Ethnocare3DCore({ isRunning = false, activeStage = '' }) {
-  const mountRef = useRef(null);
   const [exploded, setExploded] = useState(false);
   const [activeHotspot, setActiveHotspot] = useState(0);
-  const [hasWebGL, setHasWebGL] = useState(true);
-
-  const isRunningRef = useRef(isRunning);
-  const activeStageRef = useRef(activeStage);
-  const explodedRef = useRef(exploded);
-
-  useEffect(() => {
-    isRunningRef.current = isRunning;
-  }, [isRunning]);
-
-  useEffect(() => {
-    activeStageRef.current = activeStage;
-  }, [activeStage]);
-
-  useEffect(() => {
-    explodedRef.current = exploded;
-  }, [exploded]);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const containerRef = useRef(null);
 
   const hotspots = [
     { id: 0, tag: '01', title: 'LANGGRAPH STATE MACHINE', desc: 'Autonomous DAG state machine with conditional routing and dynamic revision feedback loops (max: 2 cycles).' },
@@ -31,240 +14,27 @@ export default function Ethnocare3DCore({ isRunning = false, activeStage = '' })
     { id: 3, tag: '04', title: 'MULTI-PROVIDER LLM FAILOVER', desc: 'Real-time failover across Groq, Gemini, OpenAI, Anthropic, and local Ollama nodes.' }
   ];
 
-  useEffect(() => {
-    const container = mountRef.current;
-    if (!container) return;
+  const agentNodes = [
+    { id: 'researcher', name: 'RESEARCHER', tag: '01', color: '#c084fc', angle: 0, desc: 'Multi-query web search & ChromaDB RAG' },
+    { id: 'analyst', name: 'ANALYST', tag: '02', color: '#00F5F3', angle: 90, desc: 'Evidence synthesis & theme extraction' },
+    { id: 'fact_checker', name: 'FACT-CHECKER', tag: '03', color: '#fbbf24', angle: 180, desc: 'Ground truth verification & QA gate' },
+    { id: 'writer', name: 'WRITER', tag: '04', color: '#34d399', angle: 270, desc: 'Markdown synthesis & citation anchoring' }
+  ];
 
-    let renderer, scene, camera, animationId;
-    let ring1, ring2, ring3, wireMesh, glowMesh, coreGroup, particles, moduleMeshes = [];
+  const handleMouseMove = (e) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 20;
+    const y = ((e.clientY - rect.top) / rect.height - 0.5) * -20;
+    setMousePos({ x, y });
+  };
 
-    try {
-      // 1. Scene & Camera Setup
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(40, (container.clientWidth || 800) / (container.clientHeight || 340), 0.1, 100);
-      camera.position.set(0, 0, 8.5);
+  const handleMouseLeave = () => {
+    setMousePos({ x: 0, y: 0 });
+  };
 
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'default' });
-      renderer.setSize(container.clientWidth || 800, container.clientHeight || 340);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.2;
-      
-      container.innerHTML = '';
-      container.appendChild(renderer.domElement);
-
-      // 2. Lighting
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
-
-      const mainLight = new THREE.DirectionalLight(0xffffff, 2.0);
-      mainLight.position.set(5, 8, 5);
-      scene.add(mainLight);
-
-      const cyanRimLight = new THREE.PointLight(0x00F5F3, 4.0, 15);
-      cyanRimLight.position.set(-4, -2, 4);
-      scene.add(cyanRimLight);
-
-      const purpleBackLight = new THREE.PointLight(0xc084fc, 2.5, 15);
-      purpleBackLight.position.set(4, -3, -3);
-      scene.add(purpleBackLight);
-
-      // 3. Central System Group
-      coreGroup = new THREE.Group();
-      scene.add(coreGroup);
-
-      // A. Central Titanium Core
-      const coreGeometry = new THREE.IcosahedronGeometry(1.1, 1);
-      const coreMaterial = new THREE.MeshStandardMaterial({
-        color: 0x111111,
-        metalness: 0.92,
-        roughness: 0.15,
-      });
-      const coreMesh = new THREE.Mesh(coreGeometry, coreMaterial);
-      coreGroup.add(coreMesh);
-
-      // Wireframe outer cage
-      const wireGeo = new THREE.IcosahedronGeometry(1.25, 1);
-      const wireMat = new THREE.MeshBasicMaterial({
-        color: 0x00F5F3,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.4,
-      });
-      wireMesh = new THREE.Mesh(wireGeo, wireMat);
-      coreGroup.add(wireMesh);
-
-      // Inner glowing energy sphere
-      const glowGeo = new THREE.SphereGeometry(0.65, 32, 32);
-      const glowMat = new THREE.MeshBasicMaterial({
-        color: 0x00F5F3,
-        transparent: true,
-        opacity: 0.85,
-      });
-      glowMesh = new THREE.Mesh(glowGeo, glowMat);
-      coreGroup.add(glowMesh);
-
-      // B. Concentric Technical Gimbal Rings
-      const ringMat = new THREE.MeshStandardMaterial({
-        color: 0x333333,
-        metalness: 0.85,
-        roughness: 0.25,
-      });
-      const cyanRingMat = new THREE.MeshBasicMaterial({
-        color: 0x00F5F3,
-        transparent: true,
-        opacity: 0.6,
-      });
-
-      ring1 = new THREE.Mesh(new THREE.TorusGeometry(1.9, 0.02, 16, 64), ringMat);
-      ring1.rotation.x = Math.PI / 3;
-      coreGroup.add(ring1);
-
-      ring2 = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.015, 16, 64), cyanRingMat);
-      ring2.rotation.y = Math.PI / 4;
-      ring2.rotation.x = -Math.PI / 6;
-      coreGroup.add(ring2);
-
-      ring3 = new THREE.Mesh(new THREE.TorusGeometry(2.9, 0.015, 16, 64), ringMat);
-      ring3.rotation.z = Math.PI / 5;
-      coreGroup.add(ring3);
-
-      // C. 4 Agent Satellite Modules
-      const agentModules = [
-        { color: 0xc084fc, label: 'RESEARCHER', angle: 0 },
-        { color: 0x00F5F3, label: 'ANALYST', angle: Math.PI / 2 },
-        { color: 0xfbbf24, label: 'FACT-CHECKER', angle: Math.PI },
-        { color: 0x34d399, label: 'WRITER', angle: (3 * Math.PI) / 2 }
-      ];
-
-      moduleMeshes = agentModules.map((mod) => {
-        const group = new THREE.Group();
-        const body = new THREE.Mesh(
-          new THREE.BoxGeometry(0.35, 0.35, 0.35),
-          new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.9, roughness: 0.2 })
-        );
-        group.add(body);
-
-        const lens = new THREE.Mesh(
-          new THREE.SphereGeometry(0.12, 16, 16),
-          new THREE.MeshBasicMaterial({ color: mod.color })
-        );
-        lens.position.z = 0.18;
-        group.add(lens);
-
-        coreGroup.add(group);
-        return { group, baseRadius: 3.2, angle: mod.angle, color: mod.color };
-      });
-
-      // D. Particle Stream
-      const particleCount = 80;
-      const particlePositions = new Float32Array(particleCount * 3);
-      for (let i = 0; i < particleCount * 3; i += 3) {
-        const r = 1.2 + Math.random() * 2.5;
-        const theta = Math.random() * Math.PI * 2;
-        const phi = (Math.random() - 0.5) * Math.PI;
-        particlePositions[i] = r * Math.cos(theta) * Math.cos(phi);
-        particlePositions[i + 1] = r * Math.sin(phi);
-        particlePositions[i + 2] = r * Math.sin(theta) * Math.cos(phi);
-      }
-      const particleGeo = new THREE.BufferGeometry();
-      particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-      const particleMat = new THREE.PointsMaterial({
-        color: 0x00F5F3,
-        size: 0.035,
-        transparent: true,
-        opacity: 0.7,
-      });
-      particles = new THREE.Points(particleGeo, particleMat);
-      coreGroup.add(particles);
-
-      // Mouse tracking
-      let mouseX = 0;
-      let mouseY = 0;
-
-      const onMouseMove = (e) => {
-        if (!container) return;
-        const rect = container.getBoundingClientRect();
-        mouseX = ((e.clientX - rect.left) / (rect.width || 1) - 0.5) * 2;
-        mouseY = -((e.clientY - rect.top) / (rect.height || 1) - 0.5) * 2;
-      };
-
-      window.addEventListener('mousemove', onMouseMove, { passive: true });
-
-      // Animation Loop
-      let clock = new THREE.Clock();
-
-      const animate = () => {
-        animationId = requestAnimationFrame(animate);
-        const elapsed = clock.getElapsedTime();
-        const speed = isRunningRef.current ? 2.2 : 1.0;
-
-        // Smooth core rotation
-        if (coreGroup) {
-          coreGroup.rotation.y += 0.005 * speed + mouseX * 0.01;
-          coreGroup.rotation.x = THREE.MathUtils.lerp(coreGroup.rotation.x, mouseY * 0.3, 0.05);
-        }
-
-        if (ring1) ring1.rotation.z += 0.006 * speed;
-        if (ring2) ring2.rotation.x += 0.008 * speed;
-        if (ring3) ring3.rotation.y += 0.005 * speed;
-
-        if (wireMesh) {
-          wireMesh.rotation.y = -elapsed * 0.2 * speed;
-          wireMesh.rotation.z = elapsed * 0.1 * speed;
-        }
-
-        if (glowMesh) {
-          glowMesh.scale.setScalar(1 + Math.sin(elapsed * 3) * 0.08);
-        }
-
-        const expansionFactor = explodedRef.current ? 1.6 : 1.0;
-
-        moduleMeshes.forEach((mod, idx) => {
-          const currentAngle = mod.angle + elapsed * 0.4 * speed;
-          const currentRadius = mod.baseRadius * expansionFactor;
-          
-          mod.group.position.x = Math.cos(currentAngle) * currentRadius;
-          mod.group.position.z = Math.sin(currentAngle) * currentRadius;
-          mod.group.position.y = Math.sin(elapsed * 2 + idx) * 0.3 * expansionFactor;
-          mod.group.lookAt(coreGroup.position);
-        });
-
-        if (particles) particles.rotation.y = elapsed * 0.05;
-
-        if (renderer && scene && camera) {
-          renderer.render(scene, camera);
-        }
-      };
-
-      animate();
-
-      const handleResize = () => {
-        if (!container || !camera || !renderer) return;
-        const w = container.clientWidth || 800;
-        const h = container.clientHeight || 340;
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w, h);
-      };
-      window.addEventListener('resize', handleResize, { passive: true });
-
-      return () => {
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('resize', handleResize);
-        if (animationId) cancelAnimationFrame(animationId);
-        if (renderer) {
-          if (container && renderer.domElement && container.contains(renderer.domElement)) {
-            container.removeChild(renderer.domElement);
-          }
-          renderer.dispose();
-        }
-      };
-    } catch (err) {
-      console.warn('WebGL initialization fallback triggered:', err);
-      setHasWebGL(false);
-    }
-  }, []);
+  const orbitRadius = exploded ? 160 : 120;
+  const speed = isRunning ? '2.5s' : '8s';
 
   return (
     <div style={{
@@ -326,30 +96,213 @@ export default function Ethnocare3DCore({ isRunning = false, activeStage = '' })
         </div>
       </div>
 
-      {/* 3D Canvas Mounting Area */}
-      <div style={{ position: 'relative', width: '100%', height: '340px', background: 'radial-gradient(circle at 50% 50%, #0a0a0a 0%, #000000 100%)' }}>
-        {hasWebGL ? (
-          <div
-            ref={mountRef}
-            style={{ width: '100%', height: '100%', cursor: 'grab' }}
-          />
-        ) : (
+      {/* Interactive 3D Holographic Core Viewport */}
+      <div
+        ref={containerRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '340px',
+          background: 'radial-gradient(circle at 50% 50%, #0a1118 0%, #000000 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          perspective: '1000px',
+          overflow: 'hidden',
+          cursor: 'crosshair',
+          userSelect: 'none'
+        }}
+      >
+        {/* Ambient Grid Floor */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: '-20%',
+          right: '-20%',
+          height: '140px',
+          background: 'linear-gradient(to top, rgba(0, 245, 243, 0.08) 1px, transparent 1px), linear-gradient(to right, rgba(0, 245, 243, 0.08) 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
+          transform: 'rotateX(75deg)',
+          pointerEvents: 'none',
+          maskImage: 'linear-gradient(to top, rgba(0,0,0,1), rgba(0,0,0,0))'
+        }} />
+
+        {/* Dynamic 3D Rotating Assembly Container */}
+        <div style={{
+          position: 'relative',
+          width: '320px',
+          height: '320px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transformStyle: 'preserve-3d',
+          transform: `rotateX(${mousePos.y * 0.5 + 15}deg) rotateY(${mousePos.x * 0.5}deg)`,
+          transition: 'transform 0.15s ease-out'
+        }}>
+          
+          {/* Orbital Gimbal Ring 1 */}
           <div style={{
-            width: '100%',
-            height: '100%',
+            position: 'absolute',
+            width: '260px',
+            height: '260px',
+            borderRadius: '50%',
+            border: '1px dashed rgba(0, 245, 243, 0.35)',
+            boxShadow: '0 0 15px rgba(0, 245, 243, 0.15)',
+            transform: 'rotateX(65deg) rotateZ(30deg)',
+            animation: `spinRing1 ${speed} linear infinite`,
+            pointerEvents: 'none'
+          }} />
+
+          {/* Orbital Gimbal Ring 2 */}
+          <div style={{
+            position: 'absolute',
+            width: '290px',
+            height: '290px',
+            borderRadius: '50%',
+            border: '1px solid rgba(192, 132, 252, 0.25)',
+            transform: 'rotateY(55deg) rotateX(-20deg)',
+            animation: `spinRing2 ${speed} linear infinite reverse`,
+            pointerEvents: 'none'
+          }} />
+
+          {/* Central Quantum Reactor Core */}
+          <div style={{
+            position: 'relative',
+            width: '74px',
+            height: '74px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 35% 35%, #00F5F3 0%, #092c3a 60%, #000000 100%)',
+            boxShadow: '0 0 35px rgba(0, 245, 243, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.8)',
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--text-muted)',
-            gap: '0.75rem'
+            zIndex: 10,
+            animation: 'pulseCore 2.5s ease-in-out infinite'
           }}>
-            <Sparkles size={32} color="var(--color-accent)" />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
-              LangGraph 4-Agent Orchestration Core Active
-            </span>
+            {/* Inner Rotating Tech Glyph */}
+            <Cpu size={32} color="#ffffff" style={{ filter: 'drop-shadow(0 0 8px rgba(0,245,243,0.9))' }} />
+            
+            {/* Core Label */}
+            <div style={{
+              position: 'absolute',
+              bottom: '-22px',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.62rem',
+              fontWeight: 800,
+              color: 'var(--color-accent)',
+              letterSpacing: '0.1em',
+              textShadow: '0 0 8px var(--color-accent)'
+            }}>
+              LANGGRAPH
+            </div>
           </div>
-        )}
+
+          {/* Orbiting Agent Satellite Nodes */}
+          {agentNodes.map((agent, i) => {
+            const angleRad = (agent.angle * Math.PI) / 180;
+            const x = Math.cos(angleRad) * orbitRadius;
+            const y = Math.sin(angleRad) * (orbitRadius * 0.75);
+            const isStageActive = activeStage?.toLowerCase() === agent.id;
+
+            return (
+              <div
+                key={agent.id}
+                onClick={() => setActiveHotspot(i)}
+                style={{
+                  position: 'absolute',
+                  transform: `translate(${x}px, ${y}px)`,
+                  transition: 'all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  zIndex: 20
+                }}
+              >
+                {/* Laser Connector Line to Core */}
+                <svg
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    width: '300px',
+                    height: '300px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    overflow: 'visible',
+                    zIndex: -1
+                  }}
+                >
+                  <line
+                    x1="150"
+                    y1="150"
+                    x2={150 - x}
+                    y2={150 - y}
+                    stroke={agent.color}
+                    strokeWidth={isStageActive ? '2' : '1'}
+                    strokeDasharray={isStageActive ? 'none' : '3, 3'}
+                    strokeOpacity={isStageActive ? '0.9' : '0.35'}
+                  />
+                </svg>
+
+                {/* Satellite Node Badge */}
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '6px',
+                  background: isStageActive ? agent.color : '#0e141f',
+                  border: `1.5px solid ${agent.color}`,
+                  boxShadow: `0 0 18px ${agent.color}${isStageActive ? 'cc' : '55'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'transform 0.2s ease',
+                  transform: activeHotspot === i ? 'scale(1.2)' : 'scale(1)',
+                }}>
+                  {agent.id === 'researcher' && <Orbit size={18} color={isStageActive ? '#000000' : agent.color} />}
+                  {agent.id === 'analyst' && <Activity size={18} color={isStageActive ? '#000000' : agent.color} />}
+                  {agent.id === 'fact_checker' && <ShieldCheck size={18} color={isStageActive ? '#000000' : agent.color} />}
+                  {agent.id === 'writer' && <Sparkles size={18} color={isStageActive ? '#000000' : agent.color} />}
+                </div>
+
+                {/* Node Label */}
+                <div style={{
+                  marginTop: '0.4rem',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.64rem',
+                  fontWeight: 700,
+                  color: agent.color,
+                  letterSpacing: '0.06em',
+                  background: 'rgba(0,0,0,0.85)',
+                  padding: '0.15rem 0.45rem',
+                  borderRadius: '2px',
+                  border: `1px solid ${agent.color}44`,
+                  whiteSpace: 'nowrap'
+                }}>
+                  [{agent.tag}] {agent.name}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Global Keyframe Animations */}
+        <style>{`
+          @keyframes spinRing1 {
+            from { transform: rotateX(65deg) rotateZ(0deg); }
+            to { transform: rotateX(65deg) rotateZ(360deg); }
+          }
+          @keyframes spinRing2 {
+            from { transform: rotateY(55deg) rotateX(-20deg) rotateZ(0deg); }
+            to { transform: rotateY(55deg) rotateX(-20deg) rotateZ(360deg); }
+          }
+          @keyframes pulseCore {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(0,245,243,0.5)); }
+            50% { transform: scale(1.08); filter: drop-shadow(0 0 30px rgba(0,245,243,0.85)); }
+          }
+        `}</style>
       </div>
 
       {/* Hotspots Bar & Controls */}
@@ -424,7 +377,7 @@ export default function Ethnocare3DCore({ isRunning = false, activeStage = '' })
           </div>
         </div>
         <div style={{ fontSize: '0.68rem', fontFamily: 'var(--font-mono)', color: 'var(--text-dim)' }}>
-          INTERACTION: MOVE MOUSE OVER CANVAS TO ROTATE
+          INTERACTION: MOVE MOUSE OVER CORE TO INSPECT · CLICK SATELLITE TO FOCUS
         </div>
       </div>
     </div>
