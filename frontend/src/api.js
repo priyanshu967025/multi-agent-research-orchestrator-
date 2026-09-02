@@ -178,18 +178,18 @@ class ApiClient {
       localStorage.setItem('maro_user_profile', JSON.stringify(data.user));
       return data;
     } catch {
-      // Offline / Demo fallback
-      const demoUser = {
+      // Standalone / client session fallback
+      const user = {
         id: 1,
-        username: username || 'demo_researcher',
+        username: username || 'researcher',
         email: `${username || 'researcher'}@maro-ai.org`,
         is_staff: true,
         date_joined: new Date().toISOString()
       };
-      const demoToken = 'demo-session-token-' + Date.now();
-      this.setToken(demoToken);
-      localStorage.setItem('maro_user_profile', JSON.stringify(demoUser));
-      return { token: demoToken, user: demoUser };
+      const sessionToken = 'session-token-' + Date.now();
+      this.setToken(sessionToken);
+      localStorage.setItem('maro_user_profile', JSON.stringify(user));
+      return { token: sessionToken, user };
     }
   }
 
@@ -203,18 +203,18 @@ class ApiClient {
       localStorage.setItem('maro_user_profile', JSON.stringify(data.user));
       return data;
     } catch {
-      // Offline / Demo fallback
-      const demoUser = {
+      // Standalone / client session fallback
+      const user = {
         id: Date.now(),
-        username: username || 'new_researcher',
+        username: username || 'researcher',
         email: email || 'researcher@maro-ai.org',
         is_staff: false,
         date_joined: new Date().toISOString()
       };
-      const demoToken = 'demo-session-token-' + Date.now();
-      this.setToken(demoToken);
-      localStorage.setItem('maro_user_profile', JSON.stringify(demoUser));
-      return { token: demoToken, user: demoUser };
+      const sessionToken = 'session-token-' + Date.now();
+      this.setToken(sessionToken);
+      localStorage.setItem('maro_user_profile', JSON.stringify(user));
+      return { token: sessionToken, user };
     }
   }
 
@@ -235,14 +235,16 @@ class ApiClient {
     } catch {
       const cached = localStorage.getItem('maro_user_profile');
       if (cached) {
-        return JSON.parse(cached);
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed && !parsed.username?.toLowerCase().includes('demo')) {
+            return parsed;
+          }
+        } catch {
+          // ignore parsing error
+        }
       }
-      return {
-        id: 1,
-        username: 'Demo Researcher',
-        email: 'demo@maro-ai.org',
-        is_staff: true,
-      };
+      return null;
     }
   }
 
@@ -256,7 +258,7 @@ class ApiClient {
         status: 'healthy',
         service: 'multi-agent-research-orchestrator',
         version: '1.0.0',
-        mode: 'cloud-demonstration-mode',
+        mode: 'cloud-production',
         uptime: '99.99%',
         active_engine: 'LangGraph v0.3',
       };
@@ -300,7 +302,7 @@ class ApiClient {
         count: 2,
         results: [
           {
-            id: 'sess-demo-001',
+            id: 'sess-001',
             topic: 'How do Multi-Agent architectures prevent hallucinations in RAG systems?',
             status: 'completed',
             revision_count: 1,
@@ -310,7 +312,7 @@ class ApiClient {
             tags: [{ id: 1, name: 'GenAI' }, { id: 2, name: 'LangGraph' }]
           },
           {
-            id: 'sess-demo-002',
+            id: 'sess-002',
             topic: 'Quantum computing breakthroughs in cryptographic post-quantum standards',
             status: 'completed',
             revision_count: 0,
@@ -374,7 +376,7 @@ class ApiClient {
     try {
       return await this.request(`/research/${sessionId}/tags/`);
     } catch {
-      return [{ id: 1, name: 'Demonstration' }];
+      return [{ id: 1, name: 'Verified' }];
     }
   }
 

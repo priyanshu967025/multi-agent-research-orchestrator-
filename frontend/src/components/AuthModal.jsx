@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, LogIn, UserPlus, AlertCircle, Bot, Zap, ShieldCheck } from 'lucide-react';
+import { X, LogIn, UserPlus, AlertCircle, Bot } from 'lucide-react';
 import { api } from '../api';
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
@@ -11,20 +11,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
-
-  const handleDemoLogin = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const data = await api.login('Demo Researcher', 'demo1234');
-      onAuthSuccess(data.user);
-      onClose();
-    } catch (err) {
-      setError(err.message || 'Demo sign-in failed');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,7 +40,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(0, 0, 0, 0.75)',
+      background: 'rgba(0, 0, 0, 0.82)',
       backdropFilter: 'blur(8px)',
       zIndex: 150,
       display: 'flex',
@@ -63,14 +49,14 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
       padding: '1rem',
     }}>
       <div className="glass-panel" style={{
-        maxWidth: '420px',
+        maxWidth: '400px',
         width: '100%',
-        background: '#0e131f',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
-        borderRadius: 'var(--radius-xl)',
+        background: '#0a0d14',
+        border: '1px solid rgba(255, 255, 255, 0.14)',
+        borderRadius: 'var(--radius-lg)',
         padding: '2rem',
         position: 'relative',
-        boxShadow: 'var(--shadow-lg)',
+        boxShadow: '0 16px 48px rgba(0, 0, 0, 0.85)',
       }}>
         <button
           onClick={onClose}
@@ -88,21 +74,22 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
         </button>
 
         {/* Modal Header */}
-        <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <div style={{
             width: '44px',
             height: '44px',
-            borderRadius: 'var(--radius-md)',
-            background: 'var(--brand-gradient)',
+            borderRadius: 'var(--radius-sm)',
+            background: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 0.75rem',
-            boxShadow: '0 0 16px rgba(99, 102, 241, 0.45)',
+            margin: '0 auto 0.85rem',
+            color: '#000000',
+            boxShadow: '0 0 20px rgba(255, 255, 255, 0.25)',
           }}>
-            <Bot size={24} color="#ffffff" />
+            <Bot size={22} />
           </div>
-          <h2 style={{ fontSize: '1.3rem', color: '#ffffff', marginBottom: '0.25rem' }}>
+          <h2 style={{ fontSize: '1.3rem', color: '#ffffff', marginBottom: '0.35rem', letterSpacing: '-0.02em' }}>
             {tab === 'login' ? 'Welcome Back' : 'Create Account'}
           </h2>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
@@ -110,56 +97,14 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
           </p>
         </div>
 
-        {/* Instant Demo Access Button */}
-        <button
-          type="button"
-          onClick={handleDemoLogin}
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '0.75rem 1rem',
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(52, 211, 153, 0.25))',
-            border: '1px solid rgba(99, 102, 241, 0.5)',
-            borderRadius: 'var(--radius-md)',
-            color: '#ffffff',
-            fontWeight: 700,
-            fontSize: '0.86rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            cursor: 'pointer',
-            marginBottom: '1.25rem',
-            transition: 'all 0.2s ease',
-            boxShadow: '0 0 12px rgba(99, 102, 241, 0.2)'
-          }}
-        >
-          <Zap size={16} color="#34d399" />
-          <span>⚡ Instant Recruiter / Demo Access</span>
-        </button>
-
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          margin: '0.75rem 0',
-          color: 'var(--text-dim)',
-          fontSize: '0.72rem',
-          textTransform: 'uppercase',
-          letterSpacing: '0.08em'
-        }}>
-          <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
-          <span>or sign in with credentials</span>
-          <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
-        </div>
-
         {/* Tabs */}
         <div style={{
           display: 'flex',
           background: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: 'var(--radius-md)',
+          borderRadius: 'var(--radius-sm)',
           padding: '0.25rem',
           marginBottom: '1.25rem',
+          border: '1px solid rgba(255, 255, 255, 0.08)'
         }}>
           <button
             type="button"
@@ -169,10 +114,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               padding: '0.5rem',
               borderRadius: 'var(--radius-sm)',
               border: 'none',
-              background: tab === 'login' ? 'var(--brand-primary)' : 'transparent',
-              color: tab === 'login' ? '#ffffff' : 'var(--text-muted)',
+              background: tab === 'login' ? 'var(--color-accent)' : 'transparent',
+              color: tab === 'login' ? '#000000' : 'var(--text-muted)',
               fontSize: '0.82rem',
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
@@ -187,10 +132,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               padding: '0.5rem',
               borderRadius: 'var(--radius-sm)',
               border: 'none',
-              background: tab === 'register' ? 'var(--brand-primary)' : 'transparent',
-              color: tab === 'register' ? '#ffffff' : 'var(--text-muted)',
+              background: tab === 'register' ? 'var(--color-accent)' : 'transparent',
+              color: tab === 'register' ? '#000000' : 'var(--text-muted)',
               fontSize: '0.82rem',
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
@@ -204,7 +149,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             padding: '0.65rem 0.85rem',
             background: 'rgba(239, 68, 68, 0.12)',
             border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: 'var(--radius-md)',
+            borderRadius: 'var(--radius-sm)',
             color: '#f87171',
             fontSize: '0.78rem',
             marginBottom: '1rem',
@@ -217,9 +162,9 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.95rem' }}>
           <div>
-            <label style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: 600, display: 'block', marginBottom: '0.3rem' }}>
+            <label style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>
               Username
             </label>
             <input
@@ -235,7 +180,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
 
           {tab === 'register' && (
             <div>
-              <label style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: 600, display: 'block', marginBottom: '0.3rem' }}>
+              <label style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>
                 Email (Optional)
               </label>
               <input
@@ -250,7 +195,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
           )}
 
           <div>
-            <label style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: 600, display: 'block', marginBottom: '0.3rem' }}>
+            <label style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>
               Password
             </label>
             <input
@@ -268,37 +213,21 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             type="submit"
             disabled={loading}
             className="btn btn-primary"
-            style={{ width: '100%', marginTop: '0.5rem', padding: '0.7rem' }}
+            style={{ width: '100%', marginTop: '0.4rem', padding: '0.75rem', fontWeight: 700 }}
           >
             {tab === 'login' ? (
               <>
-                <LogIn size={16} />
+                <LogIn size={15} />
                 <span>{loading ? 'Signing in...' : 'Sign In'}</span>
               </>
             ) : (
               <>
-                <UserPlus size={16} />
-                <span>{loading ? 'Creating...' : 'Create Account'}</span>
+                <UserPlus size={15} />
+                <span>{loading ? 'Creating Account...' : 'Create Account'}</span>
               </>
             )}
           </button>
         </form>
-
-        <div style={{
-          marginTop: '1.25rem',
-          padding: '0.65rem 0.85rem',
-          background: 'rgba(255, 255, 255, 0.03)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: 'var(--radius-sm)',
-          fontSize: '0.74rem',
-          color: 'var(--text-dim)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.4rem',
-          justifyContent: 'center'
-        }}>
-          <span>💡 Quick Demo: Username: <strong style={{ color: '#ffffff' }}>demo</strong> · Password: <strong style={{ color: '#ffffff' }}>demo1234</strong></span>
-        </div>
       </div>
     </div>
   );
