@@ -634,7 +634,10 @@ Autonomous multi-agent research architectures significantly outperform standard 
 
   async getBenchmarkHistory(limit = 20) {
     try {
-      return await this.request(`/benchmark/history/?limit=${limit}`);
+      const data = await this.request(`/benchmark/history/?limit=${limit}`);
+      // Backend may return error JSON object instead of array — guard it
+      if (Array.isArray(data)) return data;
+      throw new Error('Non-array response');
     } catch {
       const history = JSON.parse(localStorage.getItem('maro_benchmark_history') || '[]');
       if (history.length > 0) return history.slice(0, limit);

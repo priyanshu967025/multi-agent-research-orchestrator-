@@ -56,9 +56,11 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
     setLoadingHistory(true);
     try {
       const data = await api.getBenchmarkHistory(20);
-      setHistory(data || []);
+      // Ensure we always store an array — API may return an object on error
+      setHistory(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error('Failed to load benchmark history:', e);
+      setHistory([]);
     } finally {
       setLoadingHistory(false);
     }
