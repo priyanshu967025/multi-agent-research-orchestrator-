@@ -49,6 +49,7 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
   const [viewMode, setViewMode] = useState('split'); // 'split' | 'multi' | 'single'
   const [copied, setCopied] = useState(false);
   const [evalStep, setEvalStep] = useState('');
+  const resultsRef = useRef(null);
 
   const sampleTopics = [
     { label: 'RAG Hallucinations', query: 'How do Multi-Agent architectures prevent hallucinations in RAG systems?' },
@@ -253,7 +254,7 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
           RESEARCH COMES FIRST: Direct Comparative Intelligence View
          ───────────────────────────────────────────────────────────── */}
       {result && (
-        <div style={{ marginBottom: '2rem' }}>
+        <div ref={resultsRef} style={{ marginBottom: '2rem' }}>
           {/* Research Section Header & View Toggles */}
           <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
@@ -664,6 +665,7 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
                       onClick={() => {
                         if (h.multi_agent_report || h.evaluation_metrics) {
                           setResult(h);
+                          resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
                         } else {
                           // Trigger run for this historical topic if only shallow summary was saved
                           handleRunBenchmark(null, h.topic);

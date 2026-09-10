@@ -70,6 +70,6 @@ def analyst_node(state: ResearchState) -> dict:
 
     return {
         "analysis": analysis,
-        "messages": [f"📊 Analyst processed {len(research_data)} results."],
+        "messages": [f"[Analyst] Processed {len(research_data)} raw evidence sources and mapped core tradeoffs."],
         "current_agent": "analyst",
     }

@@ -87,6 +87,6 @@ def writer_node(state: ResearchState) -> dict:
 
     return {
         "final_report": report,
-        "messages": ["✍️ Report complete", f"💾 Saved {chunks_stored} chunks to vector memory."],
+        "messages": ["[Writer] Report complete", f"[Writer] Saved {chunks_stored} chunks to vector memory."],
         "current_agent": "writer",
     }

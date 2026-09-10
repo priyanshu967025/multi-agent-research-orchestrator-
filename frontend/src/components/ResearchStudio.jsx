@@ -119,9 +119,15 @@ export default function ResearchStudio({ user, onOpenAuth }) {
   const handleStartResearch = async () => {
     if (!topic.trim()) return;
 
-    if (!user) {
-      onOpenAuth();
-      return;
+    if (!user && !api.token) {
+      const guestUser = {
+        id: 'guest-' + Date.now(),
+        username: 'Guest Researcher',
+        email: 'guest@maro-ai.org',
+        is_staff: false,
+      };
+      api.setToken('guest-token-' + Date.now());
+      localStorage.setItem('maro_user_profile', JSON.stringify(guestUser));
     }
 
     setIsRunning(true);

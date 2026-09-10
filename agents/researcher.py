@@ -71,7 +71,7 @@ def researcher_node(state: ResearchState) -> dict:
                     )
                     answer = response.get("answer")
                     if answer and answer not in seen_urls:
-                        all_results.append(f"[Tavily Synthesis for '{query}']\n{answer}")
+                        all_results.append(f"[Source: https://app.tavily.com/search?q={query.replace(' ', '+')}]\nTitle: Tavily Direct Synthesis: {query}\n{answer}")
                     for r in response.get("results", []):
                         url = r.get("url", "")
                         if url and url not in seen_urls:

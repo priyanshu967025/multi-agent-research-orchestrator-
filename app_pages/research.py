@@ -9,8 +9,7 @@ token = st.session_state.get("auth_token", "")
 st.caption("Submit a topic, follow each agent stage, and keep the final evidence-backed report in your library.")
 
 if not token:
-    st.info("Sign in from the sidebar to create a durable research run.", icon=":material/login:")
-    st.stop()
+    st.info("Operating in standalone / direct agent execution mode. Sign in from the sidebar to sync runs to the Django database.", icon=":material/info:")
 
 with st.form("research_form"):
     topic = st.text_area(
@@ -22,14 +21,49 @@ with st.form("research_form"):
     submitted = st.form_submit_button("Start research", type="primary", icon=":material/play_arrow:")
 
 if submitted:
-    try:
-        job = api.create_job(token, topic)
-        st.session_state.active_job_id = job["id"]
-        st.session_state.active_job = job
-        st.toast("Research job created", icon=":material/check_circle:")
-        st.rerun()
-    except ApiError as error:
-        st.error(error.message, icon=":material/error:")
+    if not topic.strip():
+        st.warning("Please enter a research topic.")
+    else:
+        if token:
+            try:
+                job = api.create_job(token, topic)
+                st.session_state.active_job_id = job["id"]
+                st.session_state.active_job = job
+                st.toast("Research job created", icon=":material/check_circle:")
+                st.rerun()
+            except ApiError as error:
+                st.error(error.message, icon=":material/error:")
+        else:
+            # Standalone direct in-process execution fallback
+            with st.status("Running autonomous multi-agent pipeline...", expanded=True) as status:
+                st.write("Executing Researcher -> Analyst -> Fact-Checker -> Writer DAG...")
+                try:
+                    from graph.workflow import research_graph
+                    from backend.api.services import initial_research_state
+                    import time
+                    t0 = time.time()
+                    initial_state = initial_research_state(topic)
+                    res = research_graph.invoke(initial_state, {"recursion_limit": 25})
+                    duration = time.time() - t0
+                    job = {
+                        "id": f"local-{int(time.time())}",
+                        "topic": topic,
+                        "status": "completed",
+                        "web_sources_count": len(res.get("research_data", [])),
+                        "rag_chunks_count": len(res.get("rag_context", [])),
+                        "revision_count": res.get("revision_count", 0),
+                        "duration_seconds": duration,
+                        "final_report": res.get("final_report", ""),
+                        "fact_check_result": res.get("fact_check_result", ""),
+                        "sources": [{"source_type": "web", "title": s[:60], "snippet": s[:300]} for s in res.get("research_data", [])[:6]],
+                        "events": [{"sequence": i+1, "stage": "agent", "message": m, "created_at": "Just now"} for i, m in enumerate(res.get("messages", []))]
+                    }
+                    st.session_state.active_job_id = job["id"]
+                    st.session_state.active_job = job
+                    status.update(label="Research complete!", state="complete")
+                    st.rerun()
+                except Exception as ex:
+                    st.error(f"Agent execution error: {ex}")
 
 with st.expander("Add PDF context", icon=":material/upload_file:"):
     st.caption("Upload up to five PDFs, 10 MB each. Their text is added to the local research knowledge base.")

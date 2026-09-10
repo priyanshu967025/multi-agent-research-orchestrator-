@@ -79,6 +79,6 @@ def fact_checker_node(state: ResearchState) -> dict:
         "fact_check_result": result,
         "fact_check_passed": passed,
         "revision_count": revision_count + (0 if passed else 1),
-        "messages": [f"✅ Fact-check {'PASSED' if passed else 'NEEDS REVISION'} (revision {revision_count}/{MAX_REVISIONS})"],
+        "messages": [f"[Fact-Checker] Verification {'PASSED' if passed else 'NEEDS REVISION'} (revision {revision_count}/{MAX_REVISIONS})"],
         "current_agent": "fact_checker",
     }
