@@ -9,6 +9,7 @@ langchain-anthropic
 langchain-ollama
 tavily-python
 duckduckgo-search
+ddgs
 langchain-huggingface
 langchain-chroma
 langchain-text-splitters
