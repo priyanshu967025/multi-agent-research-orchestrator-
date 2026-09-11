@@ -61,33 +61,41 @@ def _detect() -> str:
     return "ollama"
 
 
-def get_llm(model: str | None = None, temperature: float = 0.3) -> Any:
+def get_llm(model: str | None = None, temperature: float = 0.3, max_tokens: int | None = None) -> Any:
     """Return a LangChain chat model using the active provider."""
     provider = _detect()
     if not model:
         model = _env("MODEL_NAME", "") or _DEFAULT_MODELS[provider]
 
+    kwargs: dict[str, Any] = {"model": model, "temperature": temperature}
+    if max_tokens:
+        kwargs["max_tokens"] = max_tokens
+
     if provider == "groq":
         from langchain_groq import ChatGroq
-        return ChatGroq(model=model, temperature=temperature, groq_api_key=_env("GROQ_API_KEY"))
+        return ChatGroq(groq_api_key=_env("GROQ_API_KEY"), **kwargs)
     elif provider == "gemini":
         from langchain_google_genai import ChatGoogleGenerativeAI
         api_key = _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY")
-        return ChatGoogleGenerativeAI(model=model, temperature=temperature, google_api_key=api_key)
+        if max_tokens:
+            kwargs["max_output_tokens"] = max_tokens
+            kwargs.pop("max_tokens", None)
+        return ChatGoogleGenerativeAI(google_api_key=api_key, **kwargs)
     elif provider == "openai":
         from langchain_openai import ChatOpenAI
-        return ChatOpenAI(model=model, temperature=temperature, api_key=_env("OPENAI_API_KEY"))
+        return ChatOpenAI(api_key=_env("OPENAI_API_KEY"), **kwargs)
     elif provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
-        return ChatAnthropic(model=model, temperature=temperature, api_key=_env("ANTHROPIC_API_KEY"))
+        return ChatAnthropic(api_key=_env("ANTHROPIC_API_KEY"), **kwargs)
     elif provider == "ollama":
         from langchain_ollama import ChatOllama
-        return ChatOllama(model=model, temperature=temperature, base_url=_env("OLLAMA_BASE_URL", "http://localhost:11434"))
+        kwargs.pop("max_tokens", None)
+        return ChatOllama(base_url=_env("OLLAMA_BASE_URL", "http://localhost:11434"), **kwargs)
 
     raise RuntimeError(f"Unsupported provider: {provider}")
 
 
-def get_llm_with_fallback(model: str | None = None, temperature: float = 0.3) -> Any:
+def get_llm_with_fallback(model: str | None = None, temperature: float = 0.3, max_tokens: int | None = None) -> Any:
     """Try the active provider; on failure fall through to the next."""
     active = _detect()
     to_try = [active] + [p for p in PROVIDER_PRIORITY if p != active]
@@ -97,22 +105,30 @@ def get_llm_with_fallback(model: str | None = None, temperature: float = 0.3) ->
             continue
         try:
             m = model or _env("MODEL_NAME", "") or _DEFAULT_MODELS[p]
+            kwargs: dict[str, Any] = {"model": m, "temperature": temperature}
+            if max_tokens:
+                kwargs["max_tokens"] = max_tokens
+
             if p == "groq":
                 from langchain_groq import ChatGroq
-                return ChatGroq(model=m, temperature=temperature, groq_api_key=_env("GROQ_API_KEY"))
+                return ChatGroq(groq_api_key=_env("GROQ_API_KEY"), **kwargs)
             elif p == "gemini":
                 from langchain_google_genai import ChatGoogleGenerativeAI
                 api_key = _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY")
-                return ChatGoogleGenerativeAI(model=m, temperature=temperature, google_api_key=api_key)
+                if max_tokens:
+                    kwargs["max_output_tokens"] = max_tokens
+                    kwargs.pop("max_tokens", None)
+                return ChatGoogleGenerativeAI(google_api_key=api_key, **kwargs)
             elif p == "openai":
                 from langchain_openai import ChatOpenAI
-                return ChatOpenAI(model=m, temperature=temperature, api_key=_env("OPENAI_API_KEY"))
+                return ChatOpenAI(api_key=_env("OPENAI_API_KEY"), **kwargs)
             elif p == "anthropic":
                 from langchain_anthropic import ChatAnthropic
-                return ChatAnthropic(model=m, temperature=temperature, api_key=_env("ANTHROPIC_API_KEY"))
+                return ChatAnthropic(api_key=_env("ANTHROPIC_API_KEY"), **kwargs)
             elif p == "ollama":
                 from langchain_ollama import ChatOllama
-                return ChatOllama(model=m, temperature=temperature, base_url=_env("OLLAMA_BASE_URL", "http://localhost:11434"))
+                kwargs.pop("max_tokens", None)
+                return ChatOllama(base_url=_env("OLLAMA_BASE_URL", "http://localhost:11434"), **kwargs)
         except Exception as exc:
             last_error = exc
             logger.warning("Provider %s failed: %s", p, exc)
