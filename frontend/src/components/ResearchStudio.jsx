@@ -266,20 +266,6 @@ export default function ResearchStudio({ user, onOpenAuth }) {
       </header>
 
       {/* ══════════════════════════════════════════════════════════════════
-          2. Ethnocare 3D Interactive Telemetry Core (Scroll & Explode)
-          ══════════════════════════════════════════════════════════════════ */}
-      <Ethnocare3DCore isRunning={isRunning} activeStage={currentStage} />
-
-      {/* ══════════════════════════════════════════════════════════════════
-          3. LangGraph 4-Agent Pipeline Workflow
-          ══════════════════════════════════════════════════════════════════ */}
-      <AgentGraph 
-        currentStage={currentStage} 
-        revisionCount={currentJob?.revision_count || 0} 
-        isRunning={isRunning} 
-      />
-
-      {/* ══════════════════════════════════════════════════════════════════
           3. Research Query Input & Controls
           ══════════════════════════════════════════════════════════════════ */}
       <div className="glass-panel" style={{ padding: '1.75rem', marginBottom: '2.5rem' }}>
@@ -541,11 +527,11 @@ export default function ResearchStudio({ user, onOpenAuth }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <Layers size={13} color="var(--color-accent)" />
-                <span><strong>{currentJob.web_sources_count + currentJob.rag_chunks_count}</strong> SOURCES</span>
+                <span><strong>{(currentJob.web_sources_count || 0) + (currentJob.rag_chunks_count || 0) || (currentJob.sources?.length || 0)}</strong> SOURCES</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <RefreshCw size={13} color="#fbbf24" />
-                <span><strong>{currentJob.revision_count}</strong> REVISIONS</span>
+                <span><strong>{currentJob.revision_count || 0}</strong> REVISIONS</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <Clock size={13} color="#34d399" />
@@ -554,6 +540,17 @@ export default function ResearchStudio({ user, onOpenAuth }) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          2. LangGraph 4-Agent Pipeline Workflow (Real-Time State Tracker)
+          ══════════════════════════════════════════════════════════════════ */}
+      <div style={{ marginBottom: '2rem' }}>
+        <AgentGraph 
+          currentStage={currentStage} 
+          revisionCount={currentJob?.revision_count || 0} 
+          isRunning={isRunning} 
+        />
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════
@@ -861,6 +858,27 @@ export default function ResearchStudio({ user, onOpenAuth }) {
           )}
         </div>
       )}
+
+      {/* ══════════════════════════════════════════════════════════════════
+          5. Interactive 3D Architectural Telemetry Core (Design & Inspection)
+          ══════════════════════════════════════════════════════════════════ */}
+      <div style={{ marginTop: '3rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <Layers size={18} color="var(--color-accent)" />
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Interactive 3D Architectural Core & Node Telemetry
+            </h2>
+            <span className="badge badge-accent" style={{ fontSize: '0.65rem' }}>
+              SYSTEM DESIGN
+            </span>
+          </div>
+          <span style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
+            DRAG TO ROTATE · SCROLL TO ZOOM · EXPLODE VIEW
+          </span>
+        </div>
+        <Ethnocare3DCore isRunning={isRunning} activeStage={currentStage} />
+      </div>
     </div>
   );
 }

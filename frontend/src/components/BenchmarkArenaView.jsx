@@ -14,7 +14,9 @@ import {
   Sparkles,
   ExternalLink,
   Copy,
-  Check
+  Check,
+  Settings,
+  Key
 } from 'lucide-react';
 import { marked } from 'marked';
 import { api } from '../api';
@@ -49,6 +51,18 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
   const [viewMode, setViewMode] = useState('split'); // 'split' | 'multi' | 'single'
   const [copied, setCopied] = useState(false);
   const [evalStep, setEvalStep] = useState('');
+  const [showApiConfig, setShowApiConfig] = useState(false);
+  const [groqKey, setGroqKey] = useState(() => {
+    const stored = localStorage.getItem('maro_groq_api_key');
+    if (stored && stored.trim()) return stored;
+    const fromEnv = import.meta.env?.VITE_GROQ_API_KEY || '';
+    if (fromEnv.trim()) {
+      localStorage.setItem('maro_groq_api_key', fromEnv.trim());
+      return fromEnv.trim();
+    }
+    return '';
+  });
+  const [groqModel, setGroqModel] = useState(localStorage.getItem('maro_groq_model') || 'openai/gpt-oss-20b');
   const resultsRef = useRef(null);
 
   const sampleTopics = [
@@ -88,26 +102,27 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
   const handleRunBenchmark = async (e, customTopic) => {
     if (e) e.preventDefault();
     const queryTopic = (customTopic || topic || '').trim() || sampleTopics[0].query;
+    const hasApiKey = !!localStorage.getItem('maro_groq_api_key');
 
     setRunning(true);
-    setEvalStep('1. Formulating baseline prompt & generating single-agent baseline...');
+    setResult(null);
 
+    setEvalStep('Step 1/3: Formulating baseline prompt & querying single-agent baseline...');
     const timer1 = setTimeout(() => {
-      setEvalStep('2. Coordinating 4-agent LangGraph workflow (Researcher → Analyst → Fact-Checker → Writer)...');
-    }, 1100);
-
+      setEvalStep('Step 2/3: Multi-Agent Pipeline — Decomposing topic into verified research angles & sources...');
+    }, 2800);
     const timer2 = setTimeout(() => {
-      setEvalStep('3. Cross-examining citation provenance & computing empirical comparative metrics...');
-    }, 2400);
+      setEvalStep('Step 3/3: Fact-Checker verification gate & empirical benchmark evaluation...');
+    }, 7000);
 
     try {
       const data = await api.runBenchmark(queryTopic);
       setResult(data);
-      // Refresh history
       const updatedHistory = await api.getBenchmarkHistory(20);
-      if (Array.isArray(updatedHistory)) {
-        setHistory(updatedHistory);
-      }
+      if (Array.isArray(updatedHistory)) setHistory(updatedHistory);
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     } catch (err) {
       console.error('Benchmark error:', err);
     } finally {
@@ -118,9 +133,18 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
     }
   };
 
+  const handleClearHistory = () => {
+    localStorage.removeItem('maro_benchmark_history');
+    setHistory([]);
+    setResult(null);
+  };
+
   const handleCopyReport = () => {
     if (!result) return;
-    const text = `# Benchmark Comparison: ${result.topic}\n\n## Multi-Agent Report\n\n${result.multi_agent_report || 'N/A'}\n\n## Single-Agent Baseline\n\n${result.single_agent_baseline?.text || 'N/A'}`;
+    const text = `# Multi-Agent Benchmark Evaluation: ${result.topic}\n\n` +
+      `Verdict: ${result.verdict}\n\n` +
+      `## Single-Agent Baseline\nDepth: ${result.single_agent_depth}/10 | Verifiability: ${result.single_agent_verifiability}/10\n\n${result.single_agent_baseline?.text || ''}\n\n` +
+      `## Multi-Agent Report\nDepth: ${result.multi_agent_depth}/10 | Verifiability: ${result.multi_agent_verifiability}/10\n\n${result.multi_agent_report || ''}`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -136,32 +160,111 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
   ];
 
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '1.5rem' }}>
+    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem 1rem 3rem' }}>
+      {/* Header Banner */}
+      <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <h2 style={{ fontSize: '1.45rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#ffffff' }}>
-              <Scale size={22} color="#818cf8" />
-              <span>Multi-Agent vs Single-Agent Benchmark Arena</span>
-            </h2>
-            <p style={{ fontSize: '0.86rem', color: 'var(--text-dim)', marginTop: '0.25rem' }}>
-              Empirical head-to-head evaluation testing single-prompt LLM baselines against the 4-agent LangGraph pipeline on research depth, citation verifiability, and hallucination elimination.
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+              <Scale size={20} color="var(--color-accent)" />
+              <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                Empirical Benchmark Arena
+              </h1>
+              <span className="badge badge-accent" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                LIVE COMPARISON
+              </span>
+            </div>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0, maxWidth: '680px' }}>
+              Head-to-head empirical evaluation comparing an unverified single-prompt LLM baseline against the MARO 4-agent verification pipeline.
             </p>
           </div>
 
-          {result && (
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <button
-              onClick={handleCopyReport}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              onClick={() => setShowApiConfig(!showApiConfig)}
+              className="btn btn-ghost btn-sm"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              title="Configure Groq API Key for live LLM benchmarks"
             >
-              {copied ? <Check size={14} color="#34d399" /> : <Copy size={14} />}
-              <span>{copied ? 'Comparison Copied' : 'Export Comparison'}</span>
+              <Settings size={14} color={groqKey ? '#34d399' : '#fbbf24'} />
+              <span style={{ fontSize: '0.75rem' }}>{groqKey ? 'API Connected' : 'Configure API'}</span>
             </button>
-          )}
+            {history.length > 0 && (
+              <button
+                onClick={handleClearHistory}
+                className="btn btn-ghost btn-sm"
+                style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}
+                title="Clear all stored benchmark evaluations"
+              >
+                Clear History
+              </button>
+            )}
+            {result && (
+              <button
+                onClick={handleCopyReport}
+                className="btn btn-secondary btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                {copied ? <Check size={14} color="#34d399" /> : <Copy size={14} />}
+                <span>{copied ? 'Comparison Copied' : 'Export Comparison'}</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* API Key Configuration Panel */}
+      {showApiConfig && (
+        <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '1rem', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <Key size={15} color="#818cf8" />
+            <span style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f1f5f9' }}>Groq API Configuration</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginLeft: 'auto' }}>
+              {groqKey ? 'Connected — live LLM benchmarks enabled' : 'Required for real LLM-powered benchmarks'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.5rem' }}>
+            <input
+              type="password"
+              placeholder="Enter your Groq API key (gsk_...)"
+              value={groqKey}
+              onChange={(e) => setGroqKey(e.target.value)}
+              className="input-control"
+              style={{ fontSize: '0.85rem' }}
+            />
+            <select
+              value={groqModel}
+              onChange={(e) => {
+                setGroqModel(e.target.value);
+                localStorage.setItem('maro_groq_model', e.target.value);
+              }}
+              className="input-control"
+              style={{ maxWidth: '220px', fontSize: '0.83rem' }}
+            >
+              <option value="openai/gpt-oss-20b">GPT-OSS-20B (Groq)</option>
+              <option value="qwen/qwen3.8-27b">Qwen 3.8 27B (Groq)</option>
+              <option value="openai/gpt-oss-120b">GPT-OSS-120B (Groq)</option>
+              <option value="qwen/qwen3.6-27b">Qwen 3.6 27B (Groq)</option>
+              <option value="allam-2-7b">Allam 2 7B (Groq)</option>
+            </select>
+            <button
+              onClick={() => {
+                localStorage.setItem('maro_groq_api_key', groqKey);
+                localStorage.setItem('maro_groq_model', groqModel);
+                setShowApiConfig(false);
+              }}
+              className="btn btn-primary btn-sm"
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              <Check size={14} />
+              <span>Save</span>
+            </button>
+          </div>
+          <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', margin: 0 }}>
+            API key is stored in your browser's localStorage and used directly via CORS to Groq's high-speed endpoint.
+          </p>
+        </div>
+      )}
 
       {/* Input Arena Form */}
       <div className="glass-panel" style={{ padding: '1.35rem', marginBottom: '1.75rem' }}>
