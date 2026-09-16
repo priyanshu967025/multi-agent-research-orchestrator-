@@ -10,14 +10,48 @@
 
 An enterprise-grade, autonomous, self-correcting multi-agent AI research pipeline that collaborates to formulate multi-angle queries, cross-examine evidence from the web and vector databases, verify claims against sources with automated revision gates, and synthesize publication-ready Markdown reports with inline citations.
 
-> 📖 **Interview & Architecture Master Guide:** For the 30-second elevator pitch, system pillars, resume bullet points, and top 10 interview Q&As, see [**PROJECT_DEFINITION.md**](PROJECT_DEFINITION.md).
+> 🎯 **Interview Explainer & Cheat Sheets:**
+> - [**INTERVIEW_CHEAT_SHEET.md**](INTERVIEW_CHEAT_SHEET.md) — 30s & 2min scripts, ASCII whiteboard diagram, and top 7 interview answers.
+> - [**PROJECT_DEFINITION.md**](PROJECT_DEFINITION.md) — Full master guide with system pillars, resume bullets, and 10 detailed technical Q&As.
 
 ---
 
-## ⚡ 1-Click System Verification
+## ⚡ 60-Second Overview (How to Explain to Anyone)
 
-Verify the entire system (Python syntax, Django checks, all 62 automated tests, frontend build, ChromaDB vector store, and provider detection) in one command:
+```
+ [User Research Topic]
+          │
+          ▼
+    ┌──────────────┐          ┌──────────────┐
+    │  Researcher  ├─────────►│   Analyst    │
+    │ (Web + RAG)  │          │ (Synthesis)  │
+    └──────▲───────┘          └──────┬───────┘
+           │                         │
+           │ (Conditional Revision)  │
+    ┌──────┴───────┐          ┌──────▼───────┐
+    │ Fact-Checker │◄─────────┤    Writer    ├─────► [Verified Publication Report]
+    │  (QA Gate)   │ (if pass)│ (Markdown +  │
+    └──────────────┘          │  ChromaDB)   │
+                              └──────────────┘
+```
 
+1. **Why Multi-Agent?** A single prompt suffers from cognitive overload and rationalizes its own hallucinations. Decomposing research into 4 specialized nodes (**Researcher**, **Analyst**, **Fact-Checker**, **Writer**) isolates retrieval from auditing and writing.
+2. **Autonomous Feedback Loop:** The Fact-Checker audits claims against retrieved source text. If >30% of claims lack proof, state conditionally routes back to the Researcher for targeted revision (capped at 2 loops).
+3. **Engineering Rigor:** 62 automated unit tests (100% pass rate), zero-downtime DuckDuckGo fallback, real-time SSE streaming, and native FastMCP protocol support for Claude Desktop and Cursor.
+
+---
+
+## ⚡ 1-Click Commands
+
+### 🚀 1-Click Full-Stack Dev Launch (Starts Backend + Frontend + Opens Browser):
+```bash
+# Windows Batch:
+start_all.bat
+# Or PowerShell:
+.\start_all.ps1
+```
+
+### ✅ 1-Click Full System Verification (Syntax, Django, 62 Pytests, Frontend, ChromaDB):
 ```bash
 python verify_all.py
 # Or on Windows:

@@ -8,7 +8,8 @@ import {
   Cpu, 
   User as UserIcon, 
   LogOut, 
-  LogIn
+  LogIn,
+  HelpCircle
 } from 'lucide-react';
 
 export default function Navbar({ 
@@ -18,7 +19,8 @@ export default function Navbar({
   onOpenAuth, 
   onLogout, 
   health, 
-  providerInfo 
+  providerInfo,
+  onOpenGuide
 }) {
   const isHealthy = health?.status === 'ok';
   const activeProvider = providerInfo?.active_provider || 'auto';
@@ -133,8 +135,42 @@ export default function Navbar({
           })}
         </nav>
 
-        {/* Right Section: System Status & User Profile */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+        {/* Right Section: System Status, Interview Guide & User Profile */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {/* Interview Explainer Button */}
+          <button
+            onClick={onOpenGuide}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              padding: '0.35rem 0.75rem',
+              background: 'linear-gradient(135deg, rgba(0, 245, 243, 0.12), rgba(168, 85, 247, 0.12))',
+              border: '1px solid rgba(0, 245, 243, 0.4)',
+              borderRadius: 'var(--radius-sm)',
+              color: '#ffffff',
+              fontSize: '0.72rem',
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 800,
+              letterSpacing: '0.04em',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 0 12px rgba(0, 245, 243, 0.15)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-accent)';
+              e.currentTarget.style.boxShadow = '0 0 18px rgba(0, 245, 243, 0.35)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(0, 245, 243, 0.4)';
+              e.currentTarget.style.boxShadow = '0 0 12px rgba(0, 245, 243, 0.15)';
+            }}
+            title="Open Interviewer Cheat Sheet & Architecture Walkthrough"
+          >
+            <HelpCircle size={14} color="var(--color-accent)" />
+            <span>INTERVIEW GUIDE</span>
+          </button>
+
           {/* Provider Pill */}
           <div style={{
             display: 'flex',

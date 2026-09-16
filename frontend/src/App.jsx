@@ -6,12 +6,14 @@ import RAGHubView from './components/RAGHubView';
 import BenchmarkArenaView from './components/BenchmarkArenaView';
 import LLMMCPHubView from './components/LLMMCPHubView';
 import AuthModal from './components/AuthModal';
+import InterviewGuideModal from './components/InterviewGuideModal';
 import { api } from './api';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('studio'); // 'studio' | 'library' | 'rag' | 'benchmark' | 'mcp'
   const [user, setUser] = useState(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [guideModalOpen, setGuideModalOpen] = useState(false);
   const [health, setHealth] = useState(null);
   const [platformStats, setPlatformStats] = useState(null);
 
@@ -64,6 +66,7 @@ export default function App() {
         onLogout={handleLogout}
         health={health}
         providerInfo={platformStats?.providers}
+        onOpenGuide={() => setGuideModalOpen(true)}
       />
 
       <main className="main-content">
@@ -153,6 +156,12 @@ export default function App() {
           setUser(userData);
           loadSystemInfo();
         }}
+      />
+
+      {/* Interviewer Architecture & Cheat Sheet Modal */}
+      <InterviewGuideModal
+        isOpen={guideModalOpen}
+        onClose={() => setGuideModalOpen(false)}
       />
     </div>
   );
