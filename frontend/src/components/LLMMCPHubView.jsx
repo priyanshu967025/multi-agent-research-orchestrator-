@@ -10,15 +10,11 @@ import {
   Zap,
   Play,
   Terminal,
-  ChevronRight,
   Globe,
   Shield,
-  Activity,
   Layers,
-  Lock,
   Wifi,
   WifiOff,
-  Settings,
   BookOpen,
 } from 'lucide-react';
 import { api } from '../api';

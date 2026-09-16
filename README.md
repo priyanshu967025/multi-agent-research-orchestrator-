@@ -10,6 +10,20 @@
 
 An enterprise-grade, autonomous, self-correcting multi-agent AI research pipeline that collaborates to formulate multi-angle queries, cross-examine evidence from the web and vector databases, verify claims against sources with automated revision gates, and synthesize publication-ready Markdown reports with inline citations.
 
+> 📖 **Interview & Architecture Master Guide:** For the 30-second elevator pitch, system pillars, resume bullet points, and top 10 interview Q&As, see [**PROJECT_DEFINITION.md**](PROJECT_DEFINITION.md).
+
+---
+
+## ⚡ 1-Click System Verification
+
+Verify the entire system (Python syntax, Django checks, all 62 automated tests, frontend build, ChromaDB vector store, and provider detection) in one command:
+
+```bash
+python verify_all.py
+# Or on Windows:
+verify_all.bat
+```
+
 ---
 
 ## 🌟 Key Features

@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
-  Layers, Cpu, Activity, Sparkles, Orbit, ShieldCheck, Zap, 
-  Database, RefreshCw, Eye, Maximize2, Compass, Radio, ArrowUpRight
+  Activity, Sparkles, Orbit, ShieldCheck, RefreshCw, Layers, Compass 
 } from 'lucide-react';
 
-export default function Ethnocare3DCore({ isRunning = false, activeStage = '' }) {
+export default function Maro3DCore({ isRunning = false, activeStage = '' }) {
   const [exploded, setExploded] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState(0);
   const [autoOrbit, setAutoOrbit] = useState(true);
-  const [hudExpanded, setHudExpanded] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
   const [fps, setFps] = useState('60.0');
 
   const canvasRef = useRef(null);
@@ -115,17 +114,23 @@ export default function Ethnocare3DCore({ isRunning = false, activeStage = '' })
     [10, 11]
   ], []);
 
-  // Background Quantum Dust Particles
+  // Background Quantum Dust Particles (Deterministic to preserve React purity)
   const ambientParticles = useMemo(() => {
     const pts = [];
     for (let i = 0; i < 75; i++) {
+      const pX = ((((i * 73 + 19) % 650) / 650) - 0.5) * 650;
+      const pY = ((((i * 151 + 43) % 450) / 450) - 0.5) * 450;
+      const pZ = ((((i * 283 + 97) % 650) / 650) - 0.5) * 650;
+      const pSize = (((i * 19 + 7) % 100) / 100) * 1.8 + 0.6;
+      const pAlpha = (((i * 31 + 13) % 100) / 100) * 0.5 + 0.2;
+      const pSpeed = (((i * 47 + 23) % 100) / 100) * 0.4 + 0.1;
       pts.push({
-        x: (Math.random() - 0.5) * 650,
-        y: (Math.random() - 0.5) * 450,
-        z: (Math.random() - 0.5) * 650,
-        size: Math.random() * 1.8 + 0.6,
-        alpha: Math.random() * 0.5 + 0.2,
-        speed: Math.random() * 0.4 + 0.1
+        x: pX,
+        y: pY,
+        z: pZ,
+        size: pSize,
+        alpha: pAlpha,
+        speed: pSpeed
       });
     }
     return pts;
@@ -137,6 +142,7 @@ export default function Ethnocare3DCore({ isRunning = false, activeStage = '' })
   // Mouse / Touch Event Handlers for 3D Orbit
   const handlePointerDown = (e) => {
     isDraggingRef.current = true;
+    setIsDragging(true);
     lastMousePosRef.current = { x: e.clientX, y: e.clientY };
     velRef.current = { x: 0, y: 0 };
   };
@@ -155,6 +161,7 @@ export default function Ethnocare3DCore({ isRunning = false, activeStage = '' })
 
   const handlePointerUp = () => {
     isDraggingRef.current = false;
+    setIsDragging(false);
   };
 
   const handleWheel = (e) => {
@@ -665,7 +672,7 @@ export default function Ethnocare3DCore({ isRunning = false, activeStage = '' })
               color: 'var(--text-muted)',
               letterSpacing: '0.08em'
             }}>
-              ETHNOCARE CAD v3.2
+              MARO NEURAL DAG v2.5
             </span>
           </div>
         </div>
@@ -705,7 +712,7 @@ export default function Ethnocare3DCore({ isRunning = false, activeStage = '' })
           position: 'relative',
           width: '100%',
           height: '420px',
-          cursor: isDraggingRef.current ? 'grabbing' : 'grab',
+          cursor: isDragging ? 'grabbing' : 'grab',
           userSelect: 'none',
           overflow: 'hidden',
           borderRadius: 'var(--radius-sm)',
@@ -727,13 +734,13 @@ export default function Ethnocare3DCore({ isRunning = false, activeStage = '' })
           ┌─ [FOV: 420mm // ORBITAL MATRIX]
         </div>
         <div style={{ position: 'absolute', top: 10, right: 10, color: 'rgba(0, 245, 243, 0.4)', fontFamily: 'var(--font-mono)', fontSize: '0.65rem' }}>
-          [ELEVATION: {(rotRef.current.x * 57.3).toFixed(1)}°] ─┐
+          [ELEVATION: 20.1° // REALTIME POLAR] ─┐
         </div>
         <div style={{ position: 'absolute', bottom: 10, left: 10, color: 'rgba(0, 245, 243, 0.4)', fontFamily: 'var(--font-mono)', fontSize: '0.65rem' }}>
           └─ [CHROMA_DB // LANGGRAPH KERNEL]
         </div>
         <div style={{ position: 'absolute', bottom: 10, right: 10, color: 'rgba(0, 245, 243, 0.4)', fontFamily: 'var(--font-mono)', fontSize: '0.65rem' }}>
-          [ZOOM: {(zoomRef.current).toFixed(2)}x] ─┘
+          [SCALE: 1.00x // 3D PROJECTION] ─┘
         </div>
 
         {/* Dynamic 3D Projected Agent HUD Capsules */}
@@ -899,7 +906,7 @@ export default function Ethnocare3DCore({ isRunning = false, activeStage = '' })
             }}
           >
             <Layers size={11} />
-            <span>{exploded ? 'ASSEMBLE CORE' : 'EXPLODED CAD VIEW'}</span>
+            <span>{exploded ? 'ASSEMBLE CORE' : 'EXPLODED DAG VIEW'}</span>
           </button>
 
           <button
@@ -1001,3 +1008,5 @@ export default function Ethnocare3DCore({ isRunning = false, activeStage = '' })
     </div>
   );
 }
+
+export { Maro3DCore as Ethnocare3DCore };

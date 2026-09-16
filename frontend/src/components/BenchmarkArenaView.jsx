@@ -5,14 +5,10 @@ import {
   RefreshCw, 
   Award, 
   History, 
-  ShieldCheck, 
-  Zap, 
   CheckCircle2, 
   AlertTriangle, 
-  FileText,
   Columns,
   Sparkles,
-  ExternalLink,
   Copy,
   Check,
   Settings,
@@ -102,7 +98,6 @@ export default function BenchmarkArenaView({ user: _user, onOpenAuth: _onOpenAut
   const handleRunBenchmark = async (e, customTopic) => {
     if (e) e.preventDefault();
     const queryTopic = (customTopic || topic || '').trim() || sampleTopics[0].query;
-    const hasApiKey = !!localStorage.getItem('maro_groq_api_key');
 
     setRunning(true);
     setResult(null);

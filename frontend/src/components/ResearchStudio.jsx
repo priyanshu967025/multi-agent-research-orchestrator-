@@ -28,7 +28,7 @@ import { marked } from 'marked';
 import confetti from 'canvas-confetti';
 import { api } from '../api';
 import AgentGraph from './AgentGraph';
-import Ethnocare3DCore from './Ethnocare3DCore';
+import Maro3DCore from './Maro3DCore';
 
 export default function ResearchStudio({ user, onOpenAuth }) {
   const [topic, setTopic] = useState('');
@@ -218,7 +218,7 @@ export default function ResearchStudio({ user, onOpenAuth }) {
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
       {/* ══════════════════════════════════════════════════════════════════
-          1. Ethnocare Minimalist Architectural Hero Header
+          1. MARO Minimalist Architectural Hero Header
           ══════════════════════════════════════════════════════════════════ */}
       <header style={{ marginBottom: '2.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.12)', paddingBottom: '1.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -877,7 +877,7 @@ export default function ResearchStudio({ user, onOpenAuth }) {
             DRAG TO ROTATE · SCROLL TO ZOOM · EXPLODE VIEW
           </span>
         </div>
-        <Ethnocare3DCore isRunning={isRunning} activeStage={currentStage} />
+        <Maro3DCore isRunning={isRunning} activeStage={currentStage} />
       </div>
     </div>
   );

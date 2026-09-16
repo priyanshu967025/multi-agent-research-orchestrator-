@@ -39,7 +39,7 @@ git push -u origin main --force
 ---
 
 ## 📁 What is Included in this GitHub Push:
-- ✅ **React + Vite Frontend** (Ethnocare Dark/Cyan Design + 3D WebGL Core)
+- ✅ **React + Vite Frontend** (MARO Dark/Cyan Design + 3D WebGL Core)
 - ✅ **Django REST Backend** (Token Auth, SSE Streaming, SQLite/PostgreSQL, 62 Passing Pytests)
 - ✅ **LangGraph 4-Agent Pipeline** (Researcher, Analyst, Fact-Checker, Writer)
 - ✅ **ChromaDB Vector Store RAG** (PDF ingestion & past research memory)
